@@ -4,7 +4,7 @@ export function useFeeds() {
     const triggerFeeds = useCallback(async () => {
         try {
             // Feeds disabled - using static data from database
-            console.log('Feeds disabled - using static database data')
+            // Static data provides consistent, reliable alerts without external dependencies
         } catch (e) {
             console.error('Feed refresh failed', e)
         }

@@ -48,7 +48,6 @@ class ApiClient {
           try {
             parsedData = JSON.parse(text)
           } catch (parseError) {
-            console.warn('Failed to parse response as JSON:', parseError)
             error = 'Invalid JSON response'
           }
         }

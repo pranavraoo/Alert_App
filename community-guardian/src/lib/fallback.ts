@@ -1,7 +1,7 @@
-type AlertCategory = 'Phishing' | 'Scam' | 'Imposter' | 'Data breach' | 'Local safety' | 'CVE' | 'Other'
-type Severity = 'low' | 'medium' | 'high' | 'critical'
+export type AlertCategory = 'Phishing' | 'Scam' | 'Imposter' | 'Data breach' | 'Local safety' | 'CVE' | 'Other'
+export type Severity = 'low' | 'medium' | 'high' | 'critical'
 
-interface AICategorizationResult {
+export interface AICategorizationResult {
   title: string
   category: AlertCategory
   severity: Severity

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import type { Alert } from '@/types/alert'
 import ThreatDNA from './ThreatDNA'
+import LocationBadge from './LocationBadge'
 import {
     SEVERITY_STYLES,
     SOURCE_STYLES,
@@ -108,6 +109,7 @@ export default function AlertCard({ alert }: Props) {
                             📍 {alert.location}
                         </span>
                     )}
+                    <LocationBadge alert={alert} />
                     <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">
                         {formatDate(alert.date)}
                     </span>

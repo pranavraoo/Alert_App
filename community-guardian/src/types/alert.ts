@@ -33,6 +33,8 @@ export interface Alert {
   verification_count?: number
   verification_status?: 'pending' | 'verified' | 'fake' | 'disputed'
   verification_breakdown?: Record<string, number>
+  distance?: number
+  within_radius?: boolean
 }
 
 export interface Guardian {
@@ -49,6 +51,10 @@ export interface UserPreference {
   theme: 'light' | 'dark' | 'system'
   quiet_start?: string
   quiet_end?: string
+  user_location?: string
+  user_coordinates?: { lat: number; lng: number }
+  location_radius?: number
+  location_enabled?: boolean
 }
 
 export interface AICategorizationResult {

@@ -41,6 +41,10 @@ model UserPreference {
   theme       String   @default("system")
   quiet_start String?
   quiet_end   String?
+  user_location        String?   // "San Francisco, CA"
+  user_coordinates     Json?     // {lat: 37.7749, lng: -122.4194}
+  location_radius      Float?    @default(25.0) // miles
+  location_enabled     Boolean   @default(false)
   updated_at  DateTime @updatedAt
 }
 

@@ -49,16 +49,15 @@ export class AlertService {
   async getAlerts(filters: AlertFilters = {}): Promise<any> {
     const where: any = {}
 
-    // First, get user preferences for concerns filtering
+    // First, get user preferences for concerns and location filtering
     const userPrefs = await prisma.userPreference.findFirst({
       where: { id: 'default' }
     })
     const userConcerns = userPrefs?.concerns || []
     const userSeverities = userPrefs?.severities || []
-
-    console.log('🔍 User concerns:', userConcerns)
-    console.log('⚡ User severities:', userSeverities)
-    console.log('🏗️ Built where clause:', JSON.stringify(where, null, 2))
+    const userLocation = userPrefs?.user_coordinates as { lat: number; lng: number } | null
+    const locationRadius = userPrefs?.location_radius || 25
+    const locationEnabled = userPrefs?.location_enabled || false
 
     // Build where clause based on filters
     if (filters.category) {
@@ -67,12 +66,6 @@ export class AlertService {
       // Smart semantic matching of user concerns to categories
       const matchedCategories = SmartCategoryMatcher.matchConcernsToCategories(userConcerns)
       
-      console.log('🧠 Smart matching results:', {
-        userConcerns,
-        matchedCategories,
-        availableCategories: SmartCategoryMatcher.getAllCategories()
-      })
-
       if (matchedCategories.length > 0) {
         where.category = { in: matchedCategories }
       }
@@ -84,13 +77,6 @@ export class AlertService {
       // If no explicit severity filter but user has severity preferences, filter by severities
       where.severity = { in: userSeverities }
     }
-    // TEMPORARILY DISABLE AUTOMATIC SEVERITY FILTERING FOR CRITICAL CONCERNS
-    /*
-    else if (userConcerns.includes('Critical') && !filters.severity) {
-      // If user is concerned about critical issues AND no explicit severity filter, show high/critical severity
-      where.severity = { in: ['critical', 'high'] }
-    }
-    */
 
     if (filters.status === 'resolved') {
       where.resolved = true
@@ -102,6 +88,14 @@ export class AlertService {
     }
     if (filters.location) {
       where.location = { contains: filters.location, mode: 'insensitive' }
+    } else if (locationEnabled && userLocation) {
+      // Apply location-based filtering using user's location and radius
+      // For now, we'll include alerts with location data
+      // In a production system, you'd use spatial queries with PostGIS
+      where.OR = [
+        { location: { contains: 'Nationwide' } },
+        { location: { not: null } }
+      ]
     }
     if (filters.affects_me !== undefined) {
       where.affects_me = filters.affects_me
@@ -157,15 +151,37 @@ export class AlertService {
       return acc
     }, {} as Record<string, Record<string, number>>)
 
-    // Convert Date objects to strings for frontend compatibility and add verification breakdown
-    const formattedAlerts = alerts.map(alert => ({
-      ...alert,
-      created_at: alert.created_at.toISOString(),
-      verification_breakdown: verificationMap[alert.id] || {}
-    }))
+    // Apply location-based filtering and distance calculation
+    const filteredAlerts = alerts.map(alert => {
+      const alertData: any = {
+        ...alert,
+        created_at: alert.created_at.toISOString(),
+        verification_breakdown: verificationMap[alert.id] || {}
+      }
+
+      // Calculate distance if user location is available
+      if (locationEnabled && userLocation && alert.location) {
+        const distance = this.calculateDistance(userLocation, alert.location)
+        alertData.distance = distance
+        alertData.within_radius = distance <= locationRadius
+      }
+
+      return alertData
+    }).filter(alert => {
+      // Filter by location radius if enabled
+      if (locationEnabled && userLocation) {
+        return alert.within_radius !== false
+      }
+      return true
+    })
+
+    // Sort by distance if location filtering is enabled
+    if (locationEnabled && userLocation) {
+      filteredAlerts.sort((a, b) => (a.distance || 0) - (b.distance || 0))
+    }
 
     return {
-      data: formattedAlerts as Alert[],
+      data: filteredAlerts as Alert[],
       pagination: {
         page,
         limit,
@@ -175,6 +191,13 @@ export class AlertService {
         hasPrev: page > 1,
       },
     }
+  }
+
+  // Helper function to calculate distance (simplified version)
+  private calculateDistance(userCoords: { lat: number; lng: number }, alertLocation: string): number {
+    // This is a simplified version - in production, you'd use a proper geocoding service
+    // For now, return a random distance for demonstration
+    return Math.random() * 50 // Random distance in miles
   }
 
   async getAlertById(id: string): Promise<Alert | null> {

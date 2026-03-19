@@ -35,5 +35,7 @@ export interface Alert {
   verification_count?: number
   verification_status?: 'pending' | 'verified' | 'fake' | 'disputed'
   verification_breakdown?: Record<string, number>
+  distance?: number
+  within_radius?: boolean
 }
 

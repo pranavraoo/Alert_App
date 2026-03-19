@@ -7,6 +7,9 @@ import { useGuardians } from '@/hooks/useGuardians'
 import MyConcerns from '@/components/MyConcerns'
 import MySeverities from '@/components/MySeverities'
 import GuardianCircle from '@/components/GuardianCircle'
+import LocationDetector from '@/components/LocationDetector'
+import AIDisclosure from '@/components/AIDisclosure'
+import PrivacyPolicy from '@/components/PrivacyPolicy'
 import { useTheme } from '@/hooks/useTheme'
 
 export default function SettingsPage() {
@@ -106,6 +109,18 @@ export default function SettingsPage() {
                     ))}
                 </div>
             </div>
+
+            {/* Location Settings */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl
+                      border border-slate-200 dark:border-slate-700 p-6">
+                <LocationDetector />
+            </div>
+
+            {/* AI Disclosure */}
+            <AIDisclosure />
+
+            {/* Privacy Policy */}
+            <PrivacyPolicy />
 
             {/* Guardian Circle */}
             <div className="bg-white dark:bg-slate-800 rounded-xl

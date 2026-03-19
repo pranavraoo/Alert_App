@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { fallbackCategorize } from '@/lib/fallback'
+
 vi.mock('next/navigation', () => ({
     useRouter: () => ({ push: vi.fn(), back: vi.fn() }),
     usePathname: () => '/create',
@@ -26,9 +27,33 @@ vi.mock('@/store/useStore', () => ({
     }
 }))
 
+vi.mock('@/lib/api-client', () => ({
+    apiClient: {
+        createAlert: vi.fn().mockResolvedValue({ data: { id: '1', title: 'Test' } }),
+        getAlerts: vi.fn().mockResolvedValue({ data: [], pagination: { page: 1, limit: 10, total: 0, pages: 0, hasNext: false, hasPrev: false } }),
+        updateAlert: vi.fn(),
+        deleteAlert: vi.fn(),
+        getPreferences: vi.fn().mockResolvedValue({ data: { concerns: [], theme: 'system' } }),
+        updatePreferences: vi.fn().mockResolvedValue({ data: { concerns: [], theme: 'system' } }),
+        getGuardians: vi.fn().mockResolvedValue({ data: [] }),
+        createGuardian: vi.fn(),
+        updateGuardian: vi.fn(),
+        deleteGuardian: vi.fn(),
+        verifyAlert: vi.fn(),
+        getVerificationHistory: vi.fn().mockResolvedValue({ data: [] }),
+        queryWithAI: vi.fn().mockResolvedValue({ data: { summary: 'Test response' } }),
+        categorizeText: vi.fn().mockRejectedValue({ error: 'Network error' }),
+    }
+}))
+
 beforeEach(() => {
     vi.resetAllMocks()
-    global.fetch = vi.fn()
+    global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({}),
+        text: async () => '',
+    })
 })
 
 describe('Fallback — AI Failure', () => {
