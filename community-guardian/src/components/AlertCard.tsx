@@ -72,7 +72,14 @@ export default function AlertCard({ alert }: Props) {
                                     {alert.verification_status === 'verified' ? '✓ ' : 
                                      alert.verification_status === 'fake' ? '✗ ' : '⚠ '}
                                     {alert.verification_status}
-                                    {(alert.verification_count && alert.verification_count > 1) && ` (${alert.verification_count})`}
+                                    {alert.verification_breakdown && Object.keys(alert.verification_breakdown).length > 0 && (
+                                        <span className="ml-1 text-xs">
+                                            ({Object.entries(alert.verification_breakdown).map(([type, count]) => {
+                                                const icon = type === 'verified' ? '✓' : type === 'fake' ? '✗' : '⚠'
+                                                return `${icon}${count}`
+                                            }).join(', ')})
+                                        </span>
+                                    )}
                                 </span>
                             )}
                         </div>

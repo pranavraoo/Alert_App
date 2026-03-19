@@ -32,6 +32,7 @@ export interface Alert {
   created_at: string
   verification_count?: number
   verification_status?: 'pending' | 'verified' | 'fake' | 'disputed'
+  verification_breakdown?: Record<string, number>
 }
 
 export interface Guardian {

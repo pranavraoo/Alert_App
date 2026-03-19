@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { apiClient } from '@/lib/api-client'
 import type { Alert } from '@/types/alert'
 
@@ -12,6 +12,11 @@ interface CommunityVerificationProps {
 export default function CommunityVerification({ alert, onVerificationUpdate }: CommunityVerificationProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [verificationHistory, setVerificationHistory] = useState<any[]>([])
+
+  // Load verification history on component mount
+  useEffect(() => {
+    fetchVerificationHistory()
+  }, [alert.id])
 
   const handleVerification = async (type: 'verified' | 'fake' | 'disputed') => {
     setIsSubmitting(true)
@@ -27,8 +32,13 @@ export default function CommunityVerification({ alert, onVerificationUpdate }: C
       window.alert(`Successfully marked as ${type}!`)
       onVerificationUpdate?.()
       
-      // Refresh verification history
-      fetchVerificationHistory()
+      // Refresh verification history immediately
+      await fetchVerificationHistory()
+      
+      // Also refresh the alert data to get updated verification status
+      if (onVerificationUpdate) {
+        onVerificationUpdate()
+      }
     } catch (error) {
       console.error('Verification error:', error)
       window.alert('Error submitting verification. Please try again.')
@@ -43,6 +53,8 @@ export default function CommunityVerification({ alert, onVerificationUpdate }: C
       
       if (!response.error) {
         setVerificationHistory(response.data || [])
+      } else {
+        console.error('API returned error:', response.error)
       }
     } catch (error) {
       console.error('Failed to fetch verification history:', error)

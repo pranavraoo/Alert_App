@@ -1,5 +1,5 @@
 import { prisma } from '../lib/db.js'
-import type { Alert, AlertCategory, Severity, Confidence, AlertSource } from '../types/alert.js'
+import type { Alert, Severity, Confidence, AlertSource } from '../types/alert.js'
 import { SmartCategoryMatcher } from '../lib/smartCategoryMatcher.js'
 
 export interface AlertFilters {
@@ -136,10 +136,32 @@ export class AlertService {
       take: limit,
     })
 
-    // Convert Date objects to strings for frontend compatibility
+    // Get verification breakdown for alerts that have verifications
+    const alertIds = alerts.map(a => a.id)
+    const verificationBreakdowns = alertIds.length > 0 ? await prisma.alertVerification.groupBy({
+      by: ['alert_id', 'verification_type'],
+      where: {
+        alert_id: { in: alertIds }
+      },
+      _count: {
+        verification_type: true
+      }
+    }) : []
+
+    // Transform verification data into a more usable format
+    const verificationMap = verificationBreakdowns.reduce((acc, item) => {
+      if (!acc[item.alert_id]) {
+        acc[item.alert_id] = {}
+      }
+      acc[item.alert_id][item.verification_type] = item._count.verification_type
+      return acc
+    }, {} as Record<string, Record<string, number>>)
+
+    // Convert Date objects to strings for frontend compatibility and add verification breakdown
     const formattedAlerts = alerts.map(alert => ({
       ...alert,
-      created_at: alert.created_at.toISOString()
+      created_at: alert.created_at.toISOString(),
+      verification_breakdown: verificationMap[alert.id] || {}
     }))
 
     return {
@@ -219,41 +241,78 @@ export class AlertService {
       return null
     }
 
-    // Update alert verification count and status
-    const updatedAlert = await prisma.alert.update({
-      where: { id },
-      data: {
-        verification_count: (currentAlert.verification_count || 0) + 1,
-        verification_status: verificationType,
-      },
-    })
-
-    // Record verification in history
+    // Record verification in history first
     await prisma.$executeRaw`
       INSERT INTO "AlertVerification" (id, alert_id, verification_type, created_at)
       VALUES (gen_random_uuid(), ${id}, ${verificationType}, NOW())
     `
 
+    // Get updated verification counts to determine aggregate status
+    const verificationCounts = await prisma.$queryRaw`
+      SELECT 
+        verification_type,
+        COUNT(*) as count
+      FROM "AlertVerification" 
+      WHERE alert_id = ${id}
+      GROUP BY verification_type
+    ` as Array<{ verification_type: string; count: number }>;
+
+    // Determine aggregate verification status based on majority vote
+    let aggregateStatus: 'pending' | 'verified' | 'fake' | 'disputed' = 'pending'
+    let maxCount = 0
+
+    verificationCounts.forEach(({ verification_type, count }) => {
+      if (count > maxCount) {
+        maxCount = count
+        aggregateStatus = verification_type as 'verified' | 'fake' | 'disputed'
+      }
+    })
+
+    // Update alert with new count and aggregate status
+    const updatedAlert = await prisma.alert.update({
+      where: { id },
+      data: {
+        verification_count: (currentAlert.verification_count || 0) + 1,
+        verification_status: aggregateStatus,
+      },
+    })
+
     // Convert Date objects to strings for frontend compatibility
     return {
       ...updatedAlert,
-      created_at: updatedAlert.created_at.toISOString()
+      created_at: updatedAlert.created_at.toISOString(),
     } as Alert | null
   }
 
   async getVerificationHistory(id: string): Promise<any[]> {
-    const verifications = await prisma.$queryRaw`
-      SELECT 
-        verification_type,
-        COUNT(*) as count,
-        MAX(created_at) as latest_created
-      FROM "AlertVerification" 
-      WHERE alert_id = ${id}
-      GROUP BY verification_type
-      ORDER BY latest_created DESC
-    `
-    
-    return verifications as any[]
+    try {
+      // Use Prisma client approach instead of raw SQL
+      const verifications = await prisma.alertVerification.groupBy({
+        by: ['verification_type'],
+        where: {
+          alert_id: id
+        },
+        _count: {
+          verification_type: true
+        },
+        _max: {
+          created_at: true
+        }
+      })
+      
+      // Transform the result to match expected format
+      const result = verifications.map(v => ({
+        verification_type: v.verification_type,
+        count: v._count.verification_type,
+        latest_created: v._max.created_at
+      }))
+      
+      return result
+    } catch (error) {
+      console.error('Error in getVerificationHistory:', error)
+      // Return empty array instead of throwing
+      return []
+    }
   }
 
   async getAlertsByCategory(): Promise<Record<string, number>> {

@@ -193,6 +193,8 @@ export class AlertController {
       const { id } = req.params
       
       const history = await this.alertService.getVerificationHistory(id)
+      
+      // Always return 200 with the data (even if empty)
       res.json(history)
     } catch (error) {
       console.error('Error fetching verification history:', error)
