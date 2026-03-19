@@ -6,9 +6,10 @@ import { useAlerts } from '@/hooks/useAlerts'
 import { usePreferences } from '@/hooks/usePreferences'
 import AlertCard from '@/components/AlertCard'
 import SafetyPulse from '@/components/SafetyPulse'
-import MyConcerns from '@/components/MyConcerns'
+import SmartMyConcerns from '@/components/SmartMyConcerns'
 import FocusMode from '@/components/FocusMode'
 import SkeletonList from '@/components/SkeletonList'
+import { filterAlertsByConcerns } from '@/lib/categoryMatcher'
 import type { Alert } from '@/types/alert'
 
 type DigestTab = 'for-you' | 'all-active'
@@ -40,12 +41,10 @@ export default function DigestPage() {
     // Active alerts only
     const activeAlerts = alerts.filter((a) => !a.resolved)
 
-    // "For you" — filtered by concerns
+    // "For you" — filtered by concerns using smart matching, then critical severity only
     const concerns = preferences?.concerns ?? []
-    const forYouAlerts: Alert[] =
-        concerns.length > 0
-            ? activeAlerts.filter((a) => concerns.includes(a.category))
-            : activeAlerts
+    const concernFilteredAlerts: Alert[] = filterAlertsByConcerns(activeAlerts, concerns)
+    const forYouAlerts: Alert[] = concernFilteredAlerts.filter((a) => a.severity === 'critical')
 
     // "Directly affects me" — pinned at top
     const affectsMeAlerts = forYouAlerts.filter((a) => a.affects_me)
@@ -116,7 +115,7 @@ export default function DigestPage() {
             {/* My Concerns */}
             <div className="bg-white dark:bg-slate-800 rounded-xl
                       border border-slate-200 dark:border-slate-700 p-4">
-                <MyConcerns
+                <SmartMyConcerns
                     selected={concerns}
                     onChange={handleConcernsChange}
                     saving={savingPrefs}

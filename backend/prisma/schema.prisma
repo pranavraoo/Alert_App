@@ -22,6 +22,8 @@ model Alert {
   resolved         Boolean  @default(false)
   affects_me       Boolean  @default(false)
   created_at       DateTime @default(now())
+  verification_count    Int     @default(0)
+  verification_status   String  @default("pending")
 
   @@index([category])
   @@index([severity])
@@ -29,11 +31,13 @@ model Alert {
   @@index([source])
   @@index([affects_me])
   @@index([created_at])
+  @@index([verification_status])
 }
 
 model UserPreference {
   id          String   @id @default("default")
   concerns    String[] @default([])
+  severities   String[] @default([])
   theme       String   @default("system")
   quiet_start String?
   quiet_end   String?
@@ -45,5 +49,15 @@ model Guardian {
   name       String
   label      String?
   created_at DateTime @default(now())
+}
+
+model AlertVerification {
+  id          String   @id @default(uuid())
+  alert_id    String
+  verification_type String  // 'verified', 'fake', 'disputed'
+  created_at   DateTime @default(now())
+  
+  @@index([alert_id])
+  @@index([verification_type])
 }
 

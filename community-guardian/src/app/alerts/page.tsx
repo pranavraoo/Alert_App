@@ -6,7 +6,8 @@ import { useAlerts } from '@/hooks/useAlerts'
 import { useFeeds } from '@/hooks/useFeeds'
 import AlertCard from '@/components/AlertCard'
 import SafetyPulse from '@/components/SafetyPulse'
-import FilterBar, { DEFAULT_FILTERS, type Filters } from '@/components/FilterBar'
+import ThreatQuery from '@/components/ThreatQuery'
+import SmartFilterBar, { DEFAULT_FILTERS, type Filters } from '@/components/SmartFilterBar'
 import SkeletonList from '@/components/SkeletonList'
 import TrendChart from '@/components/TrendChart'
 
@@ -19,12 +20,48 @@ export default function AlertsPage() {
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
   const [total, setTotal] = useState(0)
   const [lastChecked, setLastChecked] = useState<string | null>(null)
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 0,
+    hasNext: false,
+    hasPrev: false
+  })
 
   const load = useCallback(async (f: Filters) => {
-    const count = await fetchAlerts(f)
-    setTotal(count)
+    const result = await fetchAlerts(f)
+    
+    // Handle the new paginated response format with defensive checks
+    if (result && result.pagination) {
+      setPagination(result.pagination)
+      setTotal(result.pagination.total)
+    } else {
+      // Fallback to default pagination if something goes wrong
+      setPagination({
+        page: 1,
+        limit: 10,
+        total: 0,
+        pages: 0,
+        hasNext: false,
+        hasPrev: false
+      })
+      setTotal(0)
+    }
+    
     setLastChecked(new Date().toLocaleTimeString())
   }, [fetchAlerts])
+
+  // Separate function for pagination to avoid FilterBar issues
+  const goToPage = useCallback(async (page: number) => {
+    const filtersWithPage = { ...filters, page }
+    const result = await fetchAlerts(filtersWithPage)
+    
+    if (result && result.pagination) {
+      setPagination(result.pagination)
+      setTotal(result.pagination.total)
+    }
+  }, [fetchAlerts, filters])
 
   // On mount: trigger feeds then load alerts
   useEffect(() => {
@@ -69,11 +106,14 @@ export default function AlertsPage() {
       {/* Safety Pulse */}
       <SafetyPulse />
 
+      {/* Threat Query */}
+      <ThreatQuery />
+
       {/* Trend Chart */}
       <TrendChart alerts={alerts} />
 
       {/* Filter Bar */}
-      <FilterBar
+      <SmartFilterBar
         filters={filters}
         onChange={setFilters}
         total={total}
@@ -97,6 +137,34 @@ export default function AlertsPage() {
           {alerts.map((alert) => (
             <AlertCard key={alert.id} alert={alert} />
           ))}
+          
+          {/* Pagination Controls */}
+          {pagination.pages > 1 && (
+            <div className="flex items-center justify-between py-4 border-t border-slate-200 dark:border-slate-700">
+              <div className="text-sm text-slate-600 dark:text-slate-400">
+                Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} alerts
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => goToPage(pagination.page - 1)}
+                  disabled={!pagination.hasPrev}
+                  className="px-3 py-1 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-slate-600 dark:text-slate-400">
+                  Page {pagination.page} of {pagination.pages}
+                </span>
+                <button
+                  onClick={() => goToPage(pagination.page + 1)}
+                  disabled={!pagination.hasNext}
+                  className="px-3 py-1 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

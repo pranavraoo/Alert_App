@@ -16,6 +16,9 @@ export interface Filters {
     source: string
     location: string
     affects_me: boolean
+    verification_status: string
+    page: number
+    limit: number
 }
 
 export const DEFAULT_FILTERS: Filters = {
@@ -26,6 +29,9 @@ export const DEFAULT_FILTERS: Filters = {
     source: '',
     location: '',
     affects_me: false,
+    verification_status: '',
+    page: 1,
+    limit: 10,
 }
 
 interface Props {
@@ -51,7 +57,8 @@ export default function FilterBar({ filters, onChange, total }: Props) {
         filters.status !== '' ||
         filters.source !== '' ||
         filters.location !== '' ||
-        filters.affects_me
+        filters.affects_me ||
+        filters.verification_status !== ''
 
     const activeCount = [
         filters.category,
@@ -60,6 +67,7 @@ export default function FilterBar({ filters, onChange, total }: Props) {
         filters.source,
         filters.location,
         filters.affects_me ? 'x' : '',
+        filters.verification_status,
     ].filter(Boolean).length
 
     return (
@@ -211,6 +219,20 @@ export default function FilterBar({ filters, onChange, total }: Props) {
                             Affects me
                         </span>
                     </label>
+
+                    {/* Verification Status */}
+                    <select
+                        value={filters.verification_status}
+                        onChange={(e) => update('verification_status', e.target.value)}
+                        aria-label="Filter by verification status"
+                        className="select-input"
+                    >
+                        <option value="">All verification</option>
+                        <option value="pending">Pending</option>
+                        <option value="verified">Verified</option>
+                        <option value="fake">Fake</option>
+                        <option value="disputed">Disputed</option>
+                    </select>
                 </div>
             )}
 

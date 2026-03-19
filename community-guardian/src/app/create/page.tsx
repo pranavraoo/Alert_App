@@ -1,13 +1,12 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAlerts } from '@/hooks/useAlerts'
 import { useStore } from '@/store/useStore'
-import { fallbackCategorize } from '@/lib/fallback'
 import { findSimilarAlerts } from '@/lib/similarity'
+import { apiClient } from '@/lib/api-client'
 import SimilarAlerts from '@/components/SimilarAlerts'
-import { apiBaseUrl } from '@/lib/apiBase'
 import { CATEGORIES, SEVERITIES, LOCATIONS } from '@/lib/constants'
 import type { Alert, AICategorizationResult } from '@/types/alert'
 
@@ -41,6 +40,26 @@ export default function CreatePage() {
   const [saving, setSaving] = useState(false)
   const [aiResult, setAiResult] = useState<AICategorizationResult | null>(null)
 
+  // Load extension data on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (window as any).chrome?.storage) {
+      (window as any).chrome.storage.local.get(['threatText', 'sourceUrl', 'linkUrl'], (result: any) => {
+        if (result.threatText) {
+          setPasteText(result.threatText)
+          setForm(f => ({
+            ...f,
+            title: f.title || result.threatText.slice(0, 80),
+            description: f.description || result.threatText.slice(0, 500),
+            location: result.sourceUrl || f.location
+          }))
+          
+          // Clear stored data
+          ;(window as any).chrome.storage.local.remove(['threatText', 'sourceUrl', 'linkUrl'])
+        }
+      })
+    }
+  }, [])
+
   // ── Categorize ─────────────────────────────────────────────────────────────
   const handleCategorize = async () => {
     if (!pasteText.trim()) {
@@ -54,22 +73,32 @@ export default function CreatePage() {
     let result: AICategorizationResult
 
     try {
-      const res = await fetch(`${apiBaseUrl()}/categorize`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: pasteText }),
-      })
-      result = await res.json()
+      const response = await apiClient.categorizeText(pasteText)
+      
+      if (response.error) {
+        setErrors({ paste: 'AI service unavailable. Using smart categorization instead.' })
+        setCategorizing(false)
+        return
+      }
+      
+      result = response.data
       setUsedFallback(result.used_fallback ?? false)
+      
+      // Show friendly message if using fallback
+      if (result.used_fallback) {
+        console.log('Using enhanced smart categorization (AI unavailable)')
+      }
     } catch {
-      result = fallbackCategorize(pasteText)
-      setUsedFallback(true)
+      // If backend is unavailable, show error instead of using fallback
+      setErrors({ paste: 'Unable to connect to categorization service. Please try again.' })
+      setCategorizing(false)
+      return
     }
 
     setAiResult(result)
     setForm((f) => ({
       ...f,
-      title: f.title || pasteText.slice(0, 80),
+      title: result.title || f.title || pasteText.slice(0, 80),
       description: f.description || pasteText.slice(0, 500),
       category: result.category,
       severity: result.severity,
@@ -199,7 +228,7 @@ export default function CreatePage() {
 
           <button
             onClick={handleCategorize}
-            disabled={categorizing || !pasteText.trim()}
+            disabled={categorizing}
             className="px-4 py-2 text-sm font-medium rounded-lg
                        bg-blue-600 text-white hover:bg-blue-700
                        disabled:opacity-50 disabled:cursor-not-allowed
@@ -315,20 +344,29 @@ export default function CreatePage() {
           {/* Category + Severity row */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700
+              <label htmlFor="category" className="block text-sm font-medium text-slate-700
                                  dark:text-slate-300 mb-1">
                 Category <span className="text-red-500">*</span>
               </label>
-              <select
-                value={form.category}
-                onChange={(e) => updateForm('category', e.target.value)}
-                className="select-input"
-              >
-                <option value="">Select category</option>
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+              <div className="relative">
+                <input
+                  list="categories-datalist"
+                  id="category"
+                  value={form.category}
+                  onChange={(e) => updateForm('category', e.target.value)}
+                  placeholder="Type or select category"
+                  className="w-full px-3 py-2 text-sm rounded-lg
+                             border border-slate-200 dark:border-slate-600
+                             bg-white dark:bg-slate-800
+                             text-slate-800 dark:text-slate-100
+                             focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <datalist id="categories-datalist">
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </datalist>
+              </div>
               {errors.category && (
                 <p className="text-xs text-red-600 dark:text-red-400 mt-1">
                   {errors.category}
@@ -337,11 +375,12 @@ export default function CreatePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700
+              <label htmlFor="severity" className="block text-sm font-medium text-slate-700
                                  dark:text-slate-300 mb-1">
                 Severity <span className="text-red-500">*</span>
               </label>
               <select
+                id="severity"
                 value={form.severity}
                 onChange={(e) => updateForm('severity', e.target.value)}
                 className="select-input"

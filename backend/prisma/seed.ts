@@ -1,66 +1,134 @@
 import 'dotenv/config'
-import { readFile } from 'node:fs/promises'
-import path from 'node:path'
 import { prisma } from '../src/lib/db.js'
-
-type SeedAlert = {
-  id: string
-  title: string
-  description: string
-  category: string
-  severity: string
-  summary?: string
-  suggested_action?: string
-  reason?: string
-  confidence?: string
-  source?: string
-  location?: string | null
-  date: string
-  resolved?: boolean
-  affects_me?: boolean
-  created_at?: string
-}
+import { readFileSync } from 'fs'
+import { join } from 'path'
 
 async function main() {
-  // Reuse the synthetic dataset shipped with the frontend repo.
-  const filePath = path.join(process.cwd(), 'data', 'alerts.json')
-  const raw = await readFile(filePath, 'utf-8')
-  const alerts = JSON.parse(raw) as SeedAlert[]
-
-  await prisma.alert.createMany({
-    data: alerts.map((a) => ({
-      id: a.id,
-      title: a.title,
-      description: a.description,
-      category: a.category,
-      severity: a.severity,
-      summary: a.summary ?? '',
-      suggested_action: a.suggested_action ?? '',
-      reason: a.reason ?? '',
-      confidence: a.confidence ?? 'high',
-      source: a.source ?? 'User',
-      location: a.location ?? null,
-      date: a.date,
-      resolved: a.resolved ?? false,
-      affects_me: a.affects_me ?? false,
-      created_at: a.created_at ? new Date(a.created_at) : undefined,
-    })),
-    skipDuplicates: true,
-  })
-
-  await prisma.userPreference.upsert({
-    where: { id: 'default' },
-    create: { id: 'default', concerns: [], theme: 'system' },
-    update: {},
-  })
+  console.log('🌱 Starting database seed...')
+  
+  try {
+    // Read alerts from data/alerts.json
+    const alertsPath = join(process.cwd(), 'data', 'alerts.json')
+    const alertsData = JSON.parse(readFileSync(alertsPath, 'utf-8'))
+    console.log(`📁 Loaded ${alertsData.length} alerts from data/alerts.json`)
+    
+    // Transform data to match schema
+    const transformedAlerts = alertsData.map((alert: any) => ({
+      id: alert.id, // Keep original string IDs (schema allows override)
+      title: alert.title,
+      description: alert.description,
+      category: alert.category,
+      severity: alert.severity,
+      summary: alert.summary || '',
+      suggested_action: alert.suggested_action || '',
+      reason: alert.reason || '',
+      confidence: alert.confidence || 'high',
+      source: alert.source || 'User',
+      location: alert.location || null,
+      date: alert.date,
+      resolved: alert.resolved || false,
+      affects_me: alert.affects_me || false,
+      verification_count: alert.verification_count || 0,
+      verification_status: alert.verification_status || 'pending',
+      created_at: new Date(alert.created_at) // Convert string to DateTime
+    }))
+    
+    // Insert alerts with duplicate handling
+    const alertsResult = await prisma.alert.createMany({
+      data: transformedAlerts,
+      skipDuplicates: true
+    })
+    console.log(`✅ Created ${alertsResult.count} alerts`)
+    
+    // Sample guardians
+    const guardians = [
+      {
+        id: 'guardian-001',
+        name: 'John Smith',
+        label: 'Security Expert',
+        created_at: new Date('2024-01-15')
+      },
+      {
+        id: 'guardian-002',
+        name: 'Sarah Johnson', 
+        label: 'Community Watch',
+        created_at: new Date('2024-02-01')
+      },
+      {
+        id: 'guardian-003',
+        name: 'Mike Chen',
+        label: 'IT Professional',
+        created_at: new Date('2024-02-20')
+      }
+    ]
+    
+    const guardiansResult = await prisma.guardian.createMany({
+      data: guardians,
+      skipDuplicates: true
+    })
+    console.log(`👥 Created ${guardiansResult.count} guardians`)
+    
+    // Default user preferences
+    const preferences = {
+      id: 'default',
+      concerns: ['Phishing', 'Scam', 'Local safety', 'CVE'],
+      theme: 'system',
+      quiet_start: null,
+      quiet_end: null,
+      updated_at: new Date()
+    }
+    
+    await prisma.userPreference.upsert({
+      where: { id: preferences.id },
+      create: preferences,
+      update: preferences
+    })
+    console.log('⚙️ Created default user preferences')
+    
+    // Sample verifications for some alerts
+    const verifications = [
+      {
+        alert_id: 'seed-001',
+        verification_type: 'verified',
+        created_at: new Date()
+      },
+      {
+        alert_id: 'seed-001',
+        verification_type: 'verified',
+        created_at: new Date()
+      },
+      {
+        alert_id: 'seed-004',
+        verification_type: 'verified',
+        created_at: new Date()
+      }
+    ]
+    
+    await prisma.alertVerification.createMany({
+      data: verifications,
+      skipDuplicates: true
+    })
+    console.log(`✅ Created ${verifications.length} sample verifications`)
+    
+    console.log('\n🎉 Database seeded successfully!')
+    console.log(`📊 Summary:`)
+    console.log(`   - Alerts: ${alertsResult.count}`)
+    console.log(`   - Guardians: ${guardiansResult.count}`)
+    console.log(`   - Preferences: 1`)
+    console.log(`   - Verifications: ${verifications.length}`)
+    
+  } catch (error) {
+    console.error('❌ Seeding failed:', error)
+    throw error
+  } finally {
+    await prisma.$disconnect()
+  }
 }
 
 main()
   .then(async () => prisma.$disconnect())
   .catch(async (e) => {
-    // eslint-disable-next-line no-console
     console.error(e)
     await prisma.$disconnect()
     process.exit(1)
   })
-

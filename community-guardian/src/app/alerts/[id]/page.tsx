@@ -10,6 +10,8 @@ import ThreatDNA from '@/components/ThreatDNA'
 import CategoryChecklist from '@/components/CategoryChecklist'
 import ReadAloud from '@/components/ReadAloud'
 import AffectsMe from '@/components/AffectsMe'
+import ThreatReporting from '@/components/ThreatReporting'
+import CommunityVerification from '@/components/CommunityVerification'
 import {
   SEVERITY_STYLES,
   SOURCE_STYLES,
@@ -45,6 +47,13 @@ export default function AlertDetailPage({
     const updated = { ...alert, resolved: !alert.resolved }
     setAlert(updated)
     await updateAlert(alert.id, { resolved: !alert.resolved })
+  }
+
+  const handleVerificationUpdate = () => {
+    // Refresh the alert data to show updated verification status
+    fetchAlert(id).then((a) => {
+      setAlert(a)
+    })
   }
 
   const handleAffectsMe = async (val: boolean) => {
@@ -242,6 +251,12 @@ export default function AlertDetailPage({
         )}
       </div>
 
+      {/* Community Verification */}
+      <CommunityVerification 
+        alert={alert} 
+        onVerificationUpdate={handleVerificationUpdate}
+      />
+
       {/* Action bar */}
       <div className="bg-white dark:bg-slate-800 rounded-xl
                       border border-slate-200 dark:border-slate-700 p-4">
@@ -271,18 +286,6 @@ export default function AlertDetailPage({
           >
             ✏️ Edit
           </Link>
-
-          {/* This Affects Me */}
-          <AffectsMe
-            alertId={alert.id}
-            source={alert.source}
-            affectsMe={alert.affects_me}
-            onToggle={handleAffectsMe}
-          />
-
-          {/* Read aloud */}
-          <ReadAloud text={readAloudText} />
-
           {/* Share */}
           <button
             onClick={handleShare}

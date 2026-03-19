@@ -10,15 +10,12 @@ export async function categorizeWithGemini(text: string): Promise<AICategorizati
   const system = [
     'You are a calm, factual safety assistant.',
     'Return ONLY valid JSON (no markdown, no commentary).',
-    'Categorize the text into exactly ONE of the following:',
-    '- Infrastructure (physical damage, potholes, broken lights)',
-    '- Safety (physical threats, emergencies, health risks)',
-    '- Noise (loud parties, construction, dogs barking)',
-    '- Suspicious Activity (scams, digital phishing, prowlers, unauthorized persons)',
-    '- Other (anything else)',
+    'Generate a dynamic, highly relevant 1-3 word category (e.g., "Cryptocurrency Scam", "Malware Delivery", "Identity Theft").',
     'Severities: low, medium, high, critical',
+    'Create a catchy, concise title under 50 characters that captures the threat essence.',
+    'Summarize actionable threat context in human-centric, calm language under 120 characters.',
     'Return exactly this JSON shape:',
-    '{ "category": "...", "severity": "...", "summary": "One calm sentence under 120 chars.", "suggested_action": "1-2 concrete steps.", "reason": "Brief explanation under 80 chars.", "confidence": "high" }',
+    '{ "title": "Catchy title under 50 chars", "category": "Dynamic category", "severity": "...", "summary": "Human-centric summary under 120 chars", "suggested_action": "1-2 concrete steps.", "reason": "Brief explanation under 80 chars.", "confidence": "high" }',
   ].join('\n')
 
   const genAI = new GoogleGenerativeAI(apiKey)
@@ -28,17 +25,24 @@ export async function categorizeWithGemini(text: string): Promise<AICategorizati
   })
 
   const result = await model.generateContent(text)
-  let content = result.response.text().trim()
+  let content = result.response.text()
+  console.log('Gemini raw response:', content)
   
-  if (content.startsWith('```json')) {
-    content = content.slice(7)
-  } else if (content.startsWith('```')) {
-    content = content.slice(3)
-  }
-  if (content.endsWith('```')) {
-    content = content.slice(0, -3)
+  // Remove markdown code blocks if present
+  if (content.includes('```json')) {
+    content = content.replace(/```json\s*/, '').replace(/```\s*$/, '')
+  } else if (content.includes('```')) {
+    content = content.replace(/```\s*/, '').replace(/```\s*$/, '')
   }
   
-  return JSON.parse(content.trim()) as AICategorizationResult
+  // Clean up any extra whitespace
+  content = content.trim()
+  
+  try {
+    return JSON.parse(content) as AICategorizationResult
+  } catch (error) {
+    console.error('Failed to parse Gemini response as JSON:', content)
+    throw new Error(`Invalid JSON response from Gemini: ${content}`)
+  }
 }
 

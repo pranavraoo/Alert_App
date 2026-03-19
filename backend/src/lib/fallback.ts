@@ -1,21 +1,66 @@
 import type { AICategorizationResult, AlertCategory, Severity } from '../types/alert.js'
 
-const KEYWORDS: Record<string, string[]> = {
-  'Suspicious Activity': [
-    'phishing', 'click here', 'verify account', 'login link', 'credentials', 
-    'scam', 'prize', 'winner', 'send money', 'wire transfer', 'lottery', 'gift card',
-    'imposter', 'irs', 'microsoft support', 'police', 'prowler', 'suspicious'
+const KEYWORDS: Record<AlertCategory, string[]> = {
+  Phishing: [
+    'phishing',
+    'click here',
+    'verify account',
+    'login link',
+    'credentials',
+    'confirm your',
+    'update your password',
   ],
-  'Infrastructure': [
-    'infrastructure', 'pothole', 'broken light', 'water leak', 'power outage', 'damage', 'road'
+  Scam: [
+    'prize',
+    'winner',
+    'send money',
+    'wire transfer',
+    'lottery',
+    'gift card',
+    'congratulations',
+    'claim your',
   ],
-  'Safety': [
-    'robbery', 'fire', 'accident', 'missing person', 'shooting', 'flood', 'evacuation', 'incident report', 'threat'
+  Imposter: [
+    'irs',
+    'social security',
+    'microsoft support',
+    'police',
+    'government',
+    'impersonat',
+    'official notice',
   ],
-  'Noise': [
-    'noise', 'loud party', 'loud music', 'construction', 'dogs barking'
+  'Data breach': [
+    'breach',
+    'leaked',
+    'compromised',
+    'stolen data',
+    'exposed',
+    'database',
+    'personal information',
+    'unauthorised access',
+    'unauthorized access',
   ],
-  'Other': [],
+  'Local safety': [
+    'robbery',
+    'fire',
+    'accident',
+    'missing person',
+    'shooting',
+    'flood',
+    'evacuation',
+    'incident report',
+  ],
+  CVE: [
+    'cve-',
+    'vulnerability',
+    'exploit',
+    'patch',
+    'zero-day',
+    'rce',
+    'remote code execution',
+    'security advisory',
+  ],
+  Other: [],
 }
 
 const URGENCY_RE = /urgent|asap|immediately|right now|act now|time sensitive/i
@@ -50,6 +95,7 @@ export function fallbackCategorize(text: string): AICategorizationResult {
       : 'No clear category keywords matched'
 
   return {
+    title: text.slice(0, 50).trim() + (text.length > 50 ? '...' : ''),
     category: best.category,
     severity,
     summary: 'Classification fallback applied; please verify.',
@@ -58,4 +104,3 @@ export function fallbackCategorize(text: string): AICategorizationResult {
     confidence: 'low',
   }
 }
-

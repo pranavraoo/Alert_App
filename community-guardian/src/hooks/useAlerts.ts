@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import { useStore } from '@/store/useStore'
 import type { Alert } from '@/types/alert'
 import type { Filters } from '@/components/FilterBar'
-import { apiBaseUrl } from '@/lib/apiBase'
+import { apiClient, type PaginatedAlertsResponse } from '@/lib/api-client'
 
 export function useAlerts() {
     const store = useStore()
@@ -11,24 +11,33 @@ export function useAlerts() {
         async (filters?: Partial<Filters>) => {
             store.setLoading(true)
             try {
-                const params = new URLSearchParams()
-                if (filters?.category) params.set('category', filters.category)
-                if (filters?.severity) params.set('severity', filters.severity)
-                if (filters?.status) params.set('status', filters.status)
-                if (filters?.source) params.set('source', filters.source)
-                if (filters?.location) params.set('location', filters.location)
-                if (filters?.affects_me) params.set('affects_me', 'true')
-                if (filters?.search) params.set('search', filters.search)
+                const params: Record<string, any> = {}
+                if (filters?.category) params.category = filters.category
+                if (filters?.severity) params.severity = filters.severity
+                if (filters?.status) params.status = filters.status
+                if (filters?.source) params.source = filters.source
+                if (filters?.location) params.location = filters.location
+                if (filters?.affects_me) params.affects_me = 'true'
+                if (filters?.search) params.search = filters.search
+                if (filters?.page) params.page = filters.page.toString()
+                if (filters?.limit) params.limit = filters.limit.toString()
 
-                const res = await fetch(`${apiBaseUrl()}/alerts?${params.toString()}`)
-                const alerts = await res.json()  // backend returns array directly
+                const response = await apiClient.getAlerts(params)
+                
+                if (response.error) {
+                    console.error('Failed to fetch alerts:', response.error)
+                    store.setAlerts([])
+                    return { data: [], pagination: { page: 1, limit: 10, total: 0, pages: 0, hasNext: false, hasPrev: false } }
+                }
 
-                store.setAlerts(alerts ?? [])
-                return (alerts?.length ?? 0) as number
+                // Extract the paginated response from the API response wrapper
+                const paginatedResponse = response.data as PaginatedAlertsResponse
+                store.setAlerts(paginatedResponse.data ?? [])
+                return paginatedResponse
             } catch (e) {
                 console.error('Failed to fetch alerts', e)
                 store.setAlerts([])
-                return 0
+                return { data: [], pagination: { page: 1, limit: 10, total: 0, pages: 0, hasNext: false, hasPrev: false } }
             } finally {
                 store.setLoading(false)
             }
@@ -38,14 +47,14 @@ export function useAlerts() {
 
     const createAlert = useCallback(
         async (data: Partial<Alert>) => {
-            const res = await fetch(`${apiBaseUrl()}/alerts`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            })
-            const alert = await res.json()
-            store.addAlert(alert)
-            return alert as Alert
+            const response = await apiClient.createAlert(data)
+            
+            if (response.error) {
+                throw new Error(response.error)
+            }
+            
+            store.addAlert(response.data)
+            return response.data as Alert
         },
         [store]
     )
@@ -53,24 +62,27 @@ export function useAlerts() {
     const updateAlert = useCallback(
         async (id: string, updates: Partial<Alert>) => {
             store.updateAlert(id, updates) // optimistic
-            await fetch(`${apiBaseUrl()}/alerts/${id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updates),
-            })
+            
+            const response = await apiClient.updateAlert(id, updates)
+            
+            if (response.error) {
+                // Revert optimistic update if it fails
+                console.error('Failed to update alert:', response.error)
+            }
         },
         [store]
     )
 
     const fetchAlert = useCallback(
         async (id: string): Promise<Alert | null> => {
-            const url = `${apiBaseUrl()}/alerts/${id}`
-            console.log('fetchAlert URL:', url)
-            console.log('apiBaseUrl result:', apiBaseUrl())
             try {
-                const res = await fetch(url)
-                if (!res.ok) return null
-                return res.json()
+                const response = await apiClient.getAlert(id)
+                
+                if (response.error || !response.data) {
+                    return null
+                }
+                
+                return response.data as Alert
             } catch (e) {
                 console.error('fetchAlert error:', e)
                 return null

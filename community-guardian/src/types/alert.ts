@@ -4,14 +4,7 @@ export type AlertSource =
   | 'NVD'
   | 'User'
 
-export type AlertCategory =
-  | 'Scam'
-  | 'Phishing'
-  | 'Imposter'
-  | 'Data breach'
-  | 'Local safety'
-  | 'CVE'
-  | 'Other'
+export type AlertCategory = string 
 
 export type Severity =
   | 'low'
@@ -37,6 +30,8 @@ export interface Alert {
   resolved: boolean
   affects_me: boolean
   created_at: string
+  verification_count?: number
+  verification_status?: 'pending' | 'verified' | 'fake' | 'disputed'
 }
 
 export interface Guardian {
@@ -49,12 +44,14 @@ export interface Guardian {
 export interface UserPreference {
   id: string
   concerns: string[]
+  severities: string[]
   theme: 'light' | 'dark' | 'system'
   quiet_start?: string
   quiet_end?: string
 }
 
 export interface AICategorizationResult {
+  title: string 
   category: AlertCategory
   severity: Severity
   summary: string
