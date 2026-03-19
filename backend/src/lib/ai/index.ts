@@ -28,13 +28,8 @@ export async function queryWithAI(prompt: string): Promise<{summary: string}> {
     return await queryWithGemini(prompt)
   } catch (error) {
     console.warn('AI query failed, using fallback:', error)
-    // Provide specific feedback for quota issues
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    if (errorMessage.includes('quota') || errorMessage.includes('429')) {
-      return { summary: "AI service is temporarily unavailable due to rate limits. Using smart matching to provide relevant results based on your security alerts." }
-    }
-    // Use a simple fallback for queries
-    return { summary: "I'm having trouble processing your query right now. Using smart matching to find relevant alerts." }
+    // Instead of generic message, throw error to let QueryController handle smart matching
+    throw new Error(`AI provider failed: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
 

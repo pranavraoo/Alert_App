@@ -1,15 +1,10 @@
 import { useCallback } from 'react'
-import { apiBaseUrl } from '@/lib/apiBase'
 
 export function useFeeds() {
     const triggerFeeds = useCallback(async () => {
         try {
-            // Fire all three feeds in parallel
-            await Promise.allSettled([
-                fetch(`${apiBaseUrl()}/feeds/cisa`, { method: 'POST' }),
-                fetch(`${apiBaseUrl()}/feeds/nvd`, { method: 'POST' }),
-                fetch(`${apiBaseUrl()}/feeds/phishtank`, { method: 'POST' }),
-            ])
+            // Feeds disabled - using static data from database
+            console.log('Feeds disabled - using static database data')
         } catch (e) {
             console.error('Feed refresh failed', e)
         }

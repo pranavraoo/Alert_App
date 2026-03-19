@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { apiBaseUrl } from '@/lib/apiBase'
+import { apiClient } from '@/lib/api-client'
 import ThreatDNA from '@/components/ThreatDNA'
 import CategoryChecklist from '@/components/CategoryChecklist'
 import {
@@ -22,13 +22,24 @@ export default function SharedAlertPage({
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        fetch(`${apiBaseUrl()}/alerts/${id}`)
-            .then((r) => r.json())
-            .then((data) => {
-                setAlert(data)
+        const loadAlert = async () => {
+            try {
+                const response = await apiClient.getAlert(id)
+                if (response.error) {
+                    console.error('Failed to load alert:', response.error)
+                    setAlert(null)
+                } else {
+                    setAlert(response.data)
+                }
+            } catch (error) {
+                console.error('Error loading alert:', error)
+                setAlert(null)
+            } finally {
                 setLoading(false)
-            })
-            .catch(() => setLoading(false))
+            }
+        }
+
+        loadAlert()
     }, [id])
 
     if (loading) {

@@ -141,6 +141,14 @@ class ApiClient {
   async getVerificationHistory(id: string): Promise<ApiResponse<any[]>> {
     return this.request(`/alerts/${id}/verifications`)
   }
+
+  // Query method
+  async query(params: { question: string }): Promise<ApiResponse<any>> {
+    return this.request('/query', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    })
+  }
 }
 
 export const apiClient = new ApiClient()

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import { queryWithAI } from '../lib/ai/index.js'
+import { SmartCategoryMatcher } from '../lib/smartCategoryMatcher.js'
 import { z } from 'zod'
 
 export class QueryController {
@@ -34,23 +35,11 @@ export class QueryController {
       const where: any = {}
       
       if (userConcerns.length > 0) {
-        // Apply same filtering logic as AlertService
-        const categoryMapping: Record<string, string[]> = {
-          'CVE': ['CVE', 'Vulnerability', 'Critical'],
-          'Phishing': ['Phishing', 'Scam'],
-          'Local Safety': ['Local Safety', 'Community'],
-          'Microsoft Account Imposter': ['Microsoft', 'Account', 'Imposter']
-        }
-
-        const matchingCategories: string[] = []
-        for (const [category, keywords] of Object.entries(categoryMapping)) {
-          if (keywords.some(keyword => userConcerns.includes(keyword))) {
-            matchingCategories.push(category)
-          }
-        }
-
-        if (matchingCategories.length > 0) {
-          where.category = { in: matchingCategories }
+        // Use smart category matching (same as AlertService)
+        const matchedCategories = SmartCategoryMatcher.matchConcernsToCategories(userConcerns)
+        
+        if (matchedCategories.length > 0) {
+          where.category = { in: matchedCategories }
         }
       }
 
@@ -146,7 +135,7 @@ IMPORTANT: At the end of your answer, include the alert numbers you referenced i
     let referencedAlerts: any[] = []
     
     // Smart keyword matching for different query types
-    if (normalizedQuestion.includes('phishing') || normalizedQuestion.includes('scam')) {
+    if (normalizedQuestion.includes('phishing') || normalizedQuestion.includes('scam') || normalizedQuestion.includes('fraud')) {
       const phishingAlerts = alerts.filter(alert => 
         alert.category.toLowerCase().includes('phishing') || 
         alert.category.toLowerCase().includes('scam') ||
@@ -164,7 +153,7 @@ IMPORTANT: At the end of your answer, include the alert numbers you referenced i
       }
     }
 
-    if (normalizedQuestion.includes('cve') || normalizedQuestion.includes('vulnerability')) {
+    if (normalizedQuestion.includes('cve') || normalizedQuestion.includes('vulnerability') || normalizedQuestion.includes('software') || normalizedQuestion.includes('patch')) {
       const cveAlerts = alerts.filter(alert => 
         alert.category.toLowerCase().includes('cve') || 
         alert.category.toLowerCase().includes('vulnerability')
@@ -176,7 +165,7 @@ IMPORTANT: At the end of your answer, include the alert numbers you referenced i
       }
     }
 
-    if (normalizedQuestion.includes('critical') || normalizedQuestion.includes('high severity')) {
+    if (normalizedQuestion.includes('critical') || normalizedQuestion.includes('high severity') || normalizedQuestion.includes('urgent')) {
       const criticalAlerts = alerts.filter(alert => 
         alert.severity === 'critical' || alert.severity === 'high'
       )
@@ -187,10 +176,11 @@ IMPORTANT: At the end of your answer, include the alert numbers you referenced i
       }
     }
 
-    if (normalizedQuestion.includes('data breach') || normalizedQuestion.includes('breach')) {
+    if (normalizedQuestion.includes('data breach') || normalizedQuestion.includes('breach') || normalizedQuestion.includes('exposed')) {
       const breachAlerts = alerts.filter(alert => 
         alert.category.toLowerCase().includes('data breach') ||
-        alert.description.toLowerCase().includes('breach')
+        alert.description.toLowerCase().includes('breach') ||
+        alert.description.toLowerCase().includes('exposed')
       )
       
       if (breachAlerts.length > 0) {
@@ -199,7 +189,7 @@ IMPORTANT: At the end of your answer, include the alert numbers you referenced i
       }
     }
 
-    if (normalizedQuestion.includes('local') || normalizedQuestion.includes('nearby') || normalizedQuestion.includes('area')) {
+    if (normalizedQuestion.includes('local') || normalizedQuestion.includes('nearby') || normalizedQuestion.includes('area') || normalizedQuestion.includes('neighborhood')) {
       const localAlerts = alerts.filter(alert => 
         alert.category.toLowerCase().includes('local') ||
         alert.description.toLowerCase().includes('local')
@@ -209,6 +199,25 @@ IMPORTANT: At the end of your answer, include the alert numbers you referenced i
         answer = `Found ${localAlerts.length} local safety alerts: ${localAlerts.slice(0, 3).map(a => a.title).join(', ')}. Stay aware of your surroundings.`
         referencedAlerts = localAlerts.slice(0, 3)
       }
+    }
+
+    // Count-based queries
+    if (normalizedQuestion.includes('how many') || normalizedQuestion.includes('count') || normalizedQuestion.includes('number')) {
+      const activeCount = alerts.filter(a => !a.resolved).length
+      const categoryCounts = alerts.reduce((acc, alert) => {
+        acc[alert.category] = (acc[alert.category] || 0) + 1
+        return acc
+      }, {} as Record<string, number>)
+      
+      answer = `I found ${alerts.length} total alerts (${activeCount} active). Breakdown: ${Object.entries(categoryCounts).map(([cat, count]) => `${cat}: ${count}`).join(', ')}.`
+      referencedAlerts = alerts.slice(0, 3)
+    }
+
+    // Recent/active queries
+    if (normalizedQuestion.includes('recent') || normalizedQuestion.includes('latest') || normalizedQuestion.includes('new')) {
+      const recentAlerts = alerts.slice(0, 5)
+      answer = `Recent alerts: ${recentAlerts.map(a => a.title).join(', ')}. Stay informed about these emerging threats.`
+      referencedAlerts = recentAlerts
     }
 
     // Default response

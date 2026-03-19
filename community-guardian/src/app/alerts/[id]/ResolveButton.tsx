@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { apiClient } from '@/lib/api-client'
 
 export function ResolveButton({ alertId }: { alertId: string }) {
   const router = useRouter()
@@ -12,15 +13,11 @@ export function ResolveButton({ alertId }: { alertId: string }) {
 
     setIsResolving(true)
     try {
-      const res = await fetch(`/alerts/${alertId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ resolved: true }),
-      })
-
-      if (!res.ok) throw new Error('Failed to resolve')
+      const response = await apiClient.updateAlert(alertId, { resolved: true })
+      
+      if (response.error) {
+        throw new Error(response.error)
+      }
 
       router.refresh()
     } catch (error) {

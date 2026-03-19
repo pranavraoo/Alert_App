@@ -1,5 +1,6 @@
 import { prisma } from '../lib/db.js'
 import type { Alert, AlertCategory, Severity, Confidence, AlertSource } from '../types/alert.js'
+import { SmartCategoryMatcher } from '../lib/smartCategoryMatcher.js'
 
 export interface AlertFilters {
   category?: string
@@ -63,25 +64,17 @@ export class AlertService {
     if (filters.category) {
       where.category = filters.category
     } else if (userConcerns.length > 0) {
-      // If no explicit category filter but user has concerns, filter by concerns
-      const categoryMapping: Record<string, string[]> = {
-        'CVE': ['CVE', 'Vulnerability', 'Critical'],
-        'Phishing': ['Phishing', 'Scam'],
-        'Local Safety': ['Local Safety', 'Community'],
-        'Microsoft Account Imposter': ['Microsoft', 'Account', 'Imposter']
-      }
+      // Smart semantic matching of user concerns to categories
+      const matchedCategories = SmartCategoryMatcher.matchConcernsToCategories(userConcerns)
+      
+      console.log('🧠 Smart matching results:', {
+        userConcerns,
+        matchedCategories,
+        availableCategories: SmartCategoryMatcher.getAllCategories()
+      })
 
-      const matchingCategories: string[] = []
-      for (const [category, keywords] of Object.entries(categoryMapping)) {
-        if (keywords.some(keyword => userConcerns.includes(keyword))) {
-          matchingCategories.push(category)
-        }
-      }
-
-      console.log('🎯 Matching categories:', matchingCategories)
-
-      if (matchingCategories.length > 0) {
-        where.category = { in: matchingCategories }
+      if (matchedCategories.length > 0) {
+        where.category = { in: matchedCategories }
       }
     }
 

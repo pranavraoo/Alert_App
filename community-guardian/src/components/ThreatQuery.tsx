@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { apiBaseUrl } from '@/lib/apiBase'
+import { apiClient } from '@/lib/api-client'
 
 const EXAMPLES = [
     'What phishing scams are active right now?',
@@ -23,16 +23,13 @@ export default function ThreatQuery() {
         setError('')
 
         try {
-            const res = await fetch(`${apiBaseUrl()}/query`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ question: q }),
-            })
-
-            if (!res.ok) throw new Error('Query failed')
-
-            const data = await res.json()
-            setAnswer(data.answer ?? 'No answer available.')
+            const response = await apiClient.query({ question: q })
+            
+            if (response.error) {
+                throw new Error(response.error)
+            }
+            
+            setAnswer(response.data?.answer ?? 'No answer available.')
         } catch {
             setError('Search unavailable right now. Browse alerts below.')
         } finally {

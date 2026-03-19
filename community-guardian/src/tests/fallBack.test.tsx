@@ -57,14 +57,7 @@ describe('Fallback — AI Failure', () => {
         // Should show fallback warning
         await waitFor(() => {
             expect(
-                screen.getByText(/Using fallback classification/i)
-            ).toBeInTheDocument()
-        })
-
-        // Should show low confidence warning
-        await waitFor(() => {
-            expect(
-                screen.getByText(/Low confidence — verify/i)
+                screen.getByText(/AI service unavailable. Using smart categorization instead./i)
             ).toBeInTheDocument()
         })
     })

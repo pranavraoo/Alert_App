@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useStore } from '@/store/useStore'
+import { apiClient } from '@/lib/api-client'
 
 export function useTheme() {
     const preferences = useStore((s) => s.preferences)
@@ -26,11 +27,13 @@ export function useTheme() {
     }, [preferences?.theme, mounted])
 
     const setTheme = async (theme: 'light' | 'dark' | 'system') => {
-        await fetch('/api/preferences', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ theme }),
-        })
+        const response = await apiClient.updatePreferences({ theme })
+        
+        if (response.error) {
+            console.error('Failed to update theme:', response.error)
+            return
+        }
+        
         if (preferences) {
             setPrefs({ ...preferences, theme })
         }
