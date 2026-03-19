@@ -13,14 +13,12 @@ export function useGuardians() {
             const response = await apiClient.getGuardians()
             
             if (response.error) {
-                console.error('Failed to fetch guardians:', response.error)
                 return []
             }
             
             store.setGuardians(response.data ?? [])
             return (response.data ?? []) as Guardian[]
         } catch (e) {
-            console.error('Failed to fetch guardians', e)
             return []
         }
     }, [store])
@@ -46,7 +44,7 @@ export function useGuardians() {
             const response = await apiClient.deleteGuardian(id)
             
             if (response.error) {
-                console.error('Failed to remove guardian:', response.error)
+                // Could implement revert logic here if needed
             }
         },
         [store]

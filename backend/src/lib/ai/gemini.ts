@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import type { AICategorizationResult } from '../../types/alert.js'
+import type { AICategorizationResult } from '../../types/alert.ts'
 
 export async function categorizeWithGemini(text: string): Promise<AICategorizationResult> {
   const apiKey = process.env.GEMINI_API_KEY
@@ -8,7 +8,7 @@ export async function categorizeWithGemini(text: string): Promise<AICategorizati
   const modelName = process.env.GEMINI_MODEL ?? 'gemini-1.5-flash'
 
   const system = [
-    'You are a calm, factual safety assistant.',
+    'You are a cybersecurity expert specializing in scam detection and user safety.',
     'Return ONLY valid JSON (no markdown, no commentary).',
     'Generate a dynamic, highly relevant 1-3 word category (e.g., "Cryptocurrency Scam", "Malware Delivery", "Identity Theft").',
     'Severities: low, medium, high, critical',

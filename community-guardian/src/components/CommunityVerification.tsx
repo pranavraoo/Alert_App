@@ -54,10 +54,10 @@ export default function CommunityVerification({ alert, onVerificationUpdate }: C
       if (!response.error) {
         setVerificationHistory(response.data || [])
       } else {
-        console.error('API returned error:', response.error)
+        // Handle API error silently
       }
     } catch (error) {
-      console.error('Failed to fetch verification history:', error)
+      // Handle fetch error silently
     }
   }
 

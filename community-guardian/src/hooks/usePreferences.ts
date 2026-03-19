@@ -13,14 +13,12 @@ export function usePreferences() {
             const response = await apiClient.getPreferences()
             
             if (response.error) {
-                console.error('Failed to fetch preferences:', response.error)
                 return null
             }
             
             store.setPreferences(response.data)
             return response.data as UserPreference
         } catch (e) {
-            console.error('Failed to fetch preferences', e)
             return null
         }
     }, [store])
@@ -36,14 +34,12 @@ export function usePreferences() {
                 const response = await apiClient.updatePreferences(updates)
                 
                 if (response.error) {
-                    console.error('Failed to update preferences:', response.error)
                     return null
                 }
                 
                 store.setPreferences(response.data)
                 return response.data as UserPreference
             } catch (e) {
-                console.error('Failed to update preferences', e)
                 return null
             }
         },

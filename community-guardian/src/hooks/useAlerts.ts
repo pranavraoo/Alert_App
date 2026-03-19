@@ -25,7 +25,6 @@ export function useAlerts() {
                 const response = await apiClient.getAlerts(params)
                 
                 if (response.error) {
-                    console.error('Failed to fetch alerts:', response.error)
                     store.setAlerts([])
                     return { data: [], pagination: { page: 1, limit: 10, total: 0, pages: 0, hasNext: false, hasPrev: false } }
                 }
@@ -35,7 +34,6 @@ export function useAlerts() {
                 store.setAlerts(paginatedResponse.data ?? [])
                 return paginatedResponse
             } catch (e) {
-                console.error('Failed to fetch alerts', e)
                 store.setAlerts([])
                 return { data: [], pagination: { page: 1, limit: 10, total: 0, pages: 0, hasNext: false, hasPrev: false } }
             } finally {
@@ -67,7 +65,7 @@ export function useAlerts() {
             
             if (response.error) {
                 // Revert optimistic update if it fails
-                console.error('Failed to update alert:', response.error)
+                // Could implement revert logic here if needed
             }
         },
         [store]
@@ -84,7 +82,6 @@ export function useAlerts() {
                 
                 return response.data as Alert
             } catch (e) {
-                console.error('fetchAlert error:', e)
                 return null
             }
         },

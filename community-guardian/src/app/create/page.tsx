@@ -86,7 +86,7 @@ export default function CreatePage() {
       
       // Show friendly message if using fallback
       if (result.used_fallback) {
-        console.log('Using enhanced smart categorization (AI unavailable)')
+        // Enhanced smart categorization is being used
       }
     } catch {
       // If backend is unavailable, show error instead of using fallback

@@ -1,4 +1,4 @@
-import type { AICategorizationResult, AlertCategory, Severity } from '../types/alert.js'
+import type { AICategorizationResult, AlertCategory, Severity } from '../types/alert.ts'
 
 const KEYWORDS: Record<AlertCategory, string[]> = {
   Phishing: [

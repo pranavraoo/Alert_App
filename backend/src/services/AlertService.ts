@@ -1,5 +1,5 @@
 import { prisma } from '../lib/db.js'
-import type { Alert, Severity, Confidence, AlertSource } from '../types/alert.js'
+import type { Alert, AlertCategory, Severity, Confidence, AlertSource, UserPreferences } from '../types/index.ts'
 import { SmartCategoryMatcher } from '../lib/smartCategoryMatcher.js'
 
 export interface AlertFilters {

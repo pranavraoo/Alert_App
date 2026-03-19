@@ -1,9 +1,13 @@
 'use client'
 
 import Link from 'next/link'
+import { useState, useEffect } from 'react'
+import { useStore } from '@/store/useStore'
+import { apiClient } from '@/lib/api-client'
 import type { Alert } from '@/types/alert'
 import ThreatDNA from './ThreatDNA'
 import LocationBadge from './LocationBadge'
+import AffectsMe from './AffectsMe'
 import {
     SEVERITY_STYLES,
     SOURCE_STYLES,
@@ -27,6 +31,42 @@ function formatDate(dateStr: string): string {
 }
 
 export default function AlertCard({ alert }: Props) {
+    const updateAlert = useStore((s) => s.updateAlert)
+    const alerts = useStore((s) => s.alerts)
+    
+    // Get the current alert from store to ensure we have the latest state
+    const currentAlert = alerts.find(a => a.id === alert.id) || alert
+    const [localAffectsMe, setLocalAffectsMe] = useState(currentAlert.affects_me || false)
+
+    const handleAffectsMeToggle = async (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        
+        const newAffectsMe = !localAffectsMe
+        setLocalAffectsMe(newAffectsMe)
+        
+        // Update the alert in the store immediately for responsive UI
+        updateAlert(alert.id, { affects_me: newAffectsMe })
+        
+        // Persist to backend
+        try {
+            await apiClient.updateAlert(alert.id, { affects_me: newAffectsMe })
+        } catch (error) {
+            console.error('Failed to update affects_me status:', error)
+            // Revert local change if backend update fails
+            setLocalAffectsMe(!newAffectsMe)
+            updateAlert(alert.id, { affects_me: !newAffectsMe })
+        }
+    }
+
+    // Update local state when alert data changes in store
+    const latestAlert = alerts.find(a => a.id === alert.id)
+    useEffect(() => {
+        if (latestAlert && latestAlert.affects_me !== localAffectsMe) {
+            setLocalAffectsMe(latestAlert.affects_me || false)
+        }
+    }, [latestAlert, localAffectsMe])
+
     return (
         <Link href={`/alerts/${alert.id}`}>
             <article
@@ -56,7 +96,7 @@ export default function AlertCard({ alert }: Props) {
                                     Resolved
                                 </span>
                             )}
-                            {alert.affects_me && !alert.resolved && (
+                            {currentAlert.affects_me && !alert.resolved && (
                                 <span className="flex-shrink-0 badge bg-blue-100 text-blue-700
                                    dark:bg-blue-900 dark:text-blue-300">
                                     Affects me
@@ -110,6 +150,19 @@ export default function AlertCard({ alert }: Props) {
                         </span>
                     )}
                     <LocationBadge alert={alert} />
+                    
+                    {/* Affects Me Button */}
+                    <button
+                        onClick={handleAffectsMeToggle}
+                        className={`px-2 py-1 text-xs rounded-lg border font-medium transition-colors ${
+                            localAffectsMe
+                                ? 'bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-900/40 dark:border-blue-600 dark:text-blue-300'
+                                : 'border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
+                        }`}
+                    >
+                        {localAffectsMe ? '✓ Affects me' : '+ This affects me'}
+                    </button>
+                    
                     <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">
                         {formatDate(alert.date)}
                     </span>

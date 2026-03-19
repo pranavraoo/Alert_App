@@ -10,6 +10,7 @@ import ThreatQuery from '@/components/ThreatQuery'
 import SmartFilterBar, { DEFAULT_FILTERS, type Filters } from '@/components/SmartFilterBar'
 import SkeletonList from '@/components/SkeletonList'
 import TrendChart from '@/components/TrendChart'
+import type { Alert } from '@/types/alert'
 
 export default function AlertsPage() {
   const { fetchAlerts } = useAlerts()

@@ -10,7 +10,6 @@ export default function PreferencesLoader() {
   useEffect(() => {
     // Only load preferences once to prevent multiple calls
     if (!hasLoaded.current) {
-      console.log('Loading initial preferences...')
       fetchPreferences()
       hasLoaded.current = true
     }
