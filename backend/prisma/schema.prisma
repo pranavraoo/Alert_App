@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Alert {
+  id               String   @id @default(uuid())
+  title            String
+  description      String
+  category         String
+  severity         String
+  summary          String   @default("")
+  suggested_action String   @default("")
+  reason           String   @default("")
+  confidence       String   @default("high")
+  source           String   @default("User")
+  location         String?
+  date             String
+  resolved         Boolean  @default(false)
+  affects_me       Boolean  @default(false)
+  created_at       DateTime @default(now())
+
+  @@index([category])
+  @@index([severity])
+  @@index([resolved])
+  @@index([source])
+  @@index([affects_me])
+  @@index([created_at])
+}
+
+model UserPreference {
+  id          String   @id @default("default")
+  concerns    String[] @default([])
+  theme       String   @default("system")
+  quiet_start String?
+  quiet_end   String?
+  updated_at  DateTime @updatedAt
+}
+
+model Guardian {
+  id         String   @id @default(uuid())
+  name       String
+  label      String?
+  created_at DateTime @default(now())
+}
+

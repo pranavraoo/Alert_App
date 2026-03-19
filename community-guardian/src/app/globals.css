@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+/* ── Dark mode ── */
+@variant dark (&:where(.dark, .dark *));
+
+/* ── Base ── */
+body {
+  background-color: #f8fafc;
+  color: #1e293b;
+  transition: background-color 0.2s, color 0.2s;
+  -webkit-font-smoothing: antialiased;
+}
+
+.dark body {
+  background-color: #0f172a;
+  color: #f1f5f9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Skeleton ── */
+.skeleton {
+  border-radius: 0.25rem;
+  background-color: #e2e8f0;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.dark .skeleton {
+  background-color: #334155;
+}
+
+.skeleton-text {
+  border-radius: 0.25rem;
+  background-color: #e2e8f0;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  height: 1rem;
+  width: 100%;
+}
+
+.dark .skeleton-text {
+  background-color: #334155;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ── Badge ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* ── Select input ── */
+.select-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  color: #1e293b;
+  outline: none;
+}
+
+.select-input:focus {
+  ring: 2px solid #3b82f6;
+  border-color: #3b82f6;
+}
+
+.dark .select-input {
+  border-color: #475569;
+  background-color: #1e293b;
+  color: #f1f5f9;
+}

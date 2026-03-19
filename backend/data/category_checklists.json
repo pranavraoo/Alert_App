@@ -1,0 +1,37 @@
+{
+  "Phishing": [
+    "Do not click any links in the message.",
+    "Log in to the service directly via its official website.",
+    "Enable 2FA on the affected account immediately."
+  ],
+  "Scam": [
+    "Stop all contact with the sender immediately.",
+    "Do not send money, gift cards, or personal information.",
+    "Report to the FTC at reportfraud.ftc.gov."
+  ],
+  "Imposter": [
+    "Hang up or stop responding immediately.",
+    "Call the real organisation using the number on their official website.",
+    "Report the impersonation to local authorities if threatened."
+  ],
+  "Data breach": [
+    "Change your password on the affected service right now.",
+    "Check haveibeenpwned.com to see what else may be exposed.",
+    "Enable 2FA and monitor accounts for suspicious activity."
+  ],
+  "Local safety": [
+    "Stay informed via official local emergency channels.",
+    "Avoid the affected area until authorities issue an all-clear.",
+    "Check in with neighbours and share this alert with your community."
+  ],
+  "CVE": [
+    "Check if your software or device version is listed as affected.",
+    "Apply the vendor patch or update immediately.",
+    "Monitor CISA.gov and the vendor's security advisory for further updates."
+  ],
+  "Other": [
+    "Verify the information through a trusted official source.",
+    "Do not share unverified information further.",
+    "Report to relevant authorities if you believe a crime has occurred."
+  ]
+}
