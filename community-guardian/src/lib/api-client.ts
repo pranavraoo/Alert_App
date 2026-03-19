@@ -39,18 +39,26 @@ class ApiClient {
         ...options,
       })
 
-      const data = await response.text()
-      
       let parsedData: T | undefined
-      try {
-        parsedData = response.ok ? JSON.parse(data) : undefined
-      } catch {
-        parsedData = undefined
+      let error: string | undefined
+      
+      if (response.ok) {
+        const text = await response.text()
+        if (text) {
+          try {
+            parsedData = JSON.parse(text)
+          } catch (parseError) {
+            console.warn('Failed to parse response as JSON:', parseError)
+            error = 'Invalid JSON response'
+          }
+        }
+      } else {
+        error = await response.text()
       }
       
       return {
         data: parsedData,
-        error: response.ok ? undefined : data,
+        error,
         status: response.status,
       }
     } catch (error) {

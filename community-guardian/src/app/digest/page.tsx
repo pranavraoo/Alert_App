@@ -16,7 +16,7 @@ type DigestTab = 'for-you' | 'all-active'
 
 export default function DigestPage() {
     const { fetchAlerts } = useAlerts()
-    const { fetchPreferences, updatePreferences } = usePreferences()
+    const { updatePreferences } = usePreferences()
 
     const alerts = useStore((s) => s.alerts)
     const preferences = useStore((s) => s.preferences)
@@ -27,14 +27,13 @@ export default function DigestPage() {
     const [savingPrefs, setSavingPrefs] = useState(false)
     const [copied, setCopied] = useState(false)
 
+    const init = async () => {
+        // Only fetch alerts, preferences are loaded by PreferencesLoader
+        await fetchAlerts({ status: 'active' })
+    }
+
     // Load everything on mount
     useEffect(() => {
-        const init = async () => {
-            await Promise.all([
-                fetchAlerts({ status: 'active' }),
-                fetchPreferences(),
-            ])
-        }
         init()
     }, []) // eslint-disable-line
 

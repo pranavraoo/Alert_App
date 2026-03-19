@@ -10,16 +10,18 @@ import GuardianCircle from '@/components/GuardianCircle'
 import { useTheme } from '@/hooks/useTheme'
 
 export default function SettingsPage() {
-    const { fetchPreferences, updatePreferences } = usePreferences()
+    const { updatePreferences } = usePreferences()
     const { fetchGuardians } = useGuardians()
     const { theme, setTheme } = useTheme()
 
-    const preferences = useStore((s) => s.preferences)
+    const store = useStore()
+    const preferences = store.preferences
     const [savingPrefs, setSavingPrefs] = useState(false)
     const [saved, setSaved] = useState(false)
 
     useEffect(() => {
-        Promise.all([fetchPreferences(), fetchGuardians()])
+        // Only fetch guardians, preferences are loaded by PreferencesLoader
+        fetchGuardians()
     }, []) // eslint-disable-line
 
     const handleConcernsChange = async (concerns: string[]) => {

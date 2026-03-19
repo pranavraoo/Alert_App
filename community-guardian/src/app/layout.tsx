@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import Nav from '@/components/Nav'
+import PreferencesLoader from '@/components/PreferencesLoader'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -18,6 +19,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} bg-slate-50 dark:bg-slate-900 min-h-screen`}>
+        <PreferencesLoader />
         <Nav />
         <main
           id="main-content"
