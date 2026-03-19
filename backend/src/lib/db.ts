@@ -14,9 +14,15 @@ function createPrismaClient() {
   const pool = new pg.Pool({
     connectionString,
     ssl: { rejectUnauthorized: false },
-    max: 5,
-    idleTimeoutMillis: 10000,
+    max: 3,                        // keep pool small for Neon free tier
+    idleTimeoutMillis: 30000,      // close idle connections after 30s
     connectionTimeoutMillis: 10000,
+    allowExitOnIdle: true,         // ← key fix for Neon serverless
+  })
+
+  // Handle pool errors gracefully — don't crash on disconnect
+  pool.on('error', (err) => {
+    console.error('Pool error:', err.message)
   })
 
   const adapter = new PrismaPg(pool)

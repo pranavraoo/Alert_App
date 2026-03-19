@@ -1,5 +1,3 @@
-'use client'
-
 import { useCallback } from 'react'
 import { useStore } from '@/store/useStore'
 import type { Alert } from '@/types/alert'
@@ -66,9 +64,17 @@ export function useAlerts() {
 
     const fetchAlert = useCallback(
         async (id: string): Promise<Alert | null> => {
-            const res = await fetch(`${apiBaseUrl()}/alerts/${id}`)
-            if (!res.ok) return null
-            return res.json()
+            const url = `${apiBaseUrl()}/alerts/${id}`
+            console.log('fetchAlert URL:', url)
+            console.log('apiBaseUrl result:', apiBaseUrl())
+            try {
+                const res = await fetch(url)
+                if (!res.ok) return null
+                return res.json()
+            } catch (e) {
+                console.error('fetchAlert error:', e)
+                return null
+            }
         },
         []
     )

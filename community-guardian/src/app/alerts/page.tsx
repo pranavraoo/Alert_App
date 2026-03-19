@@ -3,17 +3,16 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useStore } from '@/store/useStore'
 import { useAlerts } from '@/hooks/useAlerts'
+import { useFeeds } from '@/hooks/useFeeds'
 import AlertCard from '@/components/AlertCard'
 import SafetyPulse from '@/components/SafetyPulse'
-import FilterBar, {
-  DEFAULT_FILTERS,
-  type Filters,
-} from '@/components/FilterBar'
+import FilterBar, { DEFAULT_FILTERS, type Filters } from '@/components/FilterBar'
 import SkeletonList from '@/components/SkeletonList'
 import TrendChart from '@/components/TrendChart'
 
 export default function AlertsPage() {
   const { fetchAlerts } = useAlerts()
+  const { triggerFeeds } = useFeeds()
   const alerts = useStore((s) => s.alerts)
   const loading = useStore((s) => s.loading)
 
@@ -21,18 +20,19 @@ export default function AlertsPage() {
   const [total, setTotal] = useState(0)
   const [lastChecked, setLastChecked] = useState<string | null>(null)
 
-  const load = useCallback(
-    async (f: Filters) => {
-      const count = await fetchAlerts(f)
-      setTotal(count)
-      setLastChecked(new Date().toLocaleTimeString())
-    },
-    [fetchAlerts]
-  )
+  const load = useCallback(async (f: Filters) => {
+    const count = await fetchAlerts(f)
+    setTotal(count)
+    setLastChecked(new Date().toLocaleTimeString())
+  }, [fetchAlerts])
 
-  // Initial load
+  // On mount: trigger feeds then load alerts
   useEffect(() => {
-    load(DEFAULT_FILTERS)
+    const init = async () => {
+      await triggerFeeds()  // pull fresh data from CISA/NVD/PhishTank
+      await load(DEFAULT_FILTERS)
+    }
+    init()
   }, []) // eslint-disable-line
 
   // Re-fetch on filter change

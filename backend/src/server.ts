@@ -307,44 +307,39 @@ app.post('/feeds/nvd', async (_req, res) => {
 })
 
 // ─── PhishTank Feed ──────────────────────────────────────────────────────────
+// ─── OpenPhish Feed (replaces PhishTank) ─────────────────────────────────────
 app.post('/feeds/phishtank', async (_req, res) => {
   try {
-    const response = await fetch(
-      'https://data.phishtank.com/data/online-valid.json',
-      { headers: { 'User-Agent': 'community-guardian/1.0' } }
-    )
-    const data = await response.json() as Array<{
-      phish_id: string
-      url: string
-      target: string
-      submission_time: string
-    }>
+    const response = await fetch('https://openphish.com/feed.txt', {
+      headers: { 'User-Agent': 'community-guardian/1.0' }
+    })
+    const text = await response.text()
 
-    const latest = data.slice(0, 20)
+    const urls = text.split('\n').filter((u) => u.trim().startsWith('http')).slice(0, 20)
     let inserted = 0
 
-    for (const p of latest) {
-      const id = `PT-${p.phish_id}`
+    for (const url of urls) {
+      const id = `OP-${Buffer.from(url).toString('base64').slice(0, 16)}`
       const existing = await prisma.alert.findUnique({ where: { id } })
       if (existing) continue
 
-      let hostname = p.url
-      try { hostname = new URL(p.url).hostname } catch { }
+      let hostname = url.trim()
+      try { hostname = new URL(url.trim()).hostname } catch { }
 
       await prisma.alert.create({
         data: {
           id,
           title: `Active Phishing Site: ${hostname}`,
-          description: `Verified phishing URL targeting ${p.target || 'users'}. Submitted ${p.submission_time}.`,
+          description: `Verified active phishing URL: ${url.trim()}. Source: OpenPhish community feed.`,
           category: 'Phishing',
           severity: 'high',
-          summary: `Active phishing site impersonating ${p.target || 'a known service'}.`,
+          summary: `Active phishing site detected at ${hostname}.`,
           suggested_action: 'Do not visit this URL. Report if received via email or SMS.',
-          reason: 'Verified by PhishTank community and automated checks.',
+          reason: 'Verified by OpenPhish automated detection.',
           confidence: 'high',
           source: 'PhishTank',
           location: 'Nationwide',
-          date: p.submission_time.split(' ')[0],
+          date: new Date().toISOString().split('T')[0],
           resolved: false,
           affects_me: false,
         },
@@ -354,8 +349,8 @@ app.post('/feeds/phishtank', async (_req, res) => {
 
     res.json({ ok: true, inserted })
   } catch (error) {
-    console.error('PhishTank feed error:', error)
-    res.status(500).json({ error: 'Failed to fetch PhishTank feed' })
+    console.error('OpenPhish feed error:', error)
+    res.status(500).json({ error: 'Failed to fetch phishing feed' })
   }
 })
 
