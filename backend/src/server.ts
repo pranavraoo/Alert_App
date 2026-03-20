@@ -36,8 +36,7 @@ app.use((req: express.Request, res: express.Response) => {
 })
 
 const port = Number(process.env.PORT ?? '4000')
-app.listen(port, () => {
-  // eslint-disable-next-line no-console
-  console.log(`Backend listening on http://localhost:${port}`)
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Backend listening on http://0.0.0.0:${port}`)
 })
 
