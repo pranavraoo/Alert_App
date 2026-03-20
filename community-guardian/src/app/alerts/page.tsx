@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useStore } from '@/store/useStore'
 import { useAlerts } from '@/hooks/useAlerts'
-import { useFeeds } from '@/hooks/useFeeds'
 import AlertCard from '@/components/AlertCard'
 import SafetyPulse from '@/components/SafetyPulse'
 import ThreatQuery from '@/components/ThreatQuery'
@@ -14,7 +13,6 @@ import type { Alert } from '@/types/alert'
 
 export default function AlertsPage() {
   const { fetchAlerts } = useAlerts()
-  const { triggerFeeds } = useFeeds()
   const alerts = useStore((s) => s.alerts)
   const loading = useStore((s) => s.loading)
 
@@ -64,14 +62,13 @@ export default function AlertsPage() {
     }
   }, [fetchAlerts, filters])
 
-  // On mount: trigger feeds then load alerts
+  // On mount: load alerts
   useEffect(() => {
     const init = async () => {
-      await triggerFeeds()  // pull fresh data from CISA/NVD/PhishTank
       await load(DEFAULT_FILTERS)
     }
     init()
-  }, []) // eslint-disable-line
+  }, [])
 
   // Re-fetch on filter change
   useEffect(() => {
