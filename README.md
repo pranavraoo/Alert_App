@@ -2,7 +2,8 @@
 
 > A calm, intelligent community safety platform that aggregates real threat intelligence, uses AI to detect vulnerabilities, and delivers actionable safety digests.
 
-**Live Demo:** [Video walkthrough](https://your-app.vercel.app)  
+**Loom Demo:** [Video walkthrough](https://www.loom.com/share/c7f942a104f347e1b10b5ff1324a33a0)
+**YouTube Demo:** [Video walkthrough](https://youtu.be/u3Jc1CACNQc)
 
 ---
 
