@@ -11,12 +11,12 @@ export async function categorizeWithOllama(text: string): Promise<AICategorizati
   const system = [
     'You are a cybersecurity expert specializing in scam detection and user safety.',
     'Return ONLY valid JSON (no markdown, no commentary).',
-    'Generate a dynamic, highly relevant 1-3 word category (e.g., "Cryptocurrency Scam", "Malware Delivery", "Identity Theft").',
+     'Categories: Scam, Phishing, Imposter, Data breach, Local safety, CVE, Other',
     'Severities: low, medium, high, critical',
     'Create a catchy, concise title under 50 characters that captures the threat essence.',
     'Summarize actionable threat context in human-centric, calm language under 120 characters.',
     'Return exactly this JSON shape:',
-    '{ "title": "Catchy title under 50 chars", "category": "Dynamic category", "severity": "...", "summary": "Human-centric summary under 120 chars", "suggested_action": "1-2 concrete steps.", "reason": "Brief explanation under 80 chars.", "confidence": "high" }',
+    '{ "title": "Catchy title under 50 chars", "category": "One of: Scam, Phishing, Imposter, Data breach, Local safety, CVE, Other", "severity": "...", "summary": "Human-centric summary under 120 chars", "suggested_action": "1-2 concrete steps.", "reason": "Brief explanation under 80 chars.", "confidence": "high" }',
   ].join('\n')
 
   const res = await fetch(`${baseUrl.replace(/\/$/, '')}/api/chat`, {
