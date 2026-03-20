@@ -82,7 +82,7 @@ describe('Fallback — AI Failure', () => {
         // Should show fallback warning
         await waitFor(() => {
             expect(
-                screen.getByText(/AI service unavailable. Using smart categorization instead./i)
+                screen.getByText(/Unable to connect to categorization service. Please try again./i)
             ).toBeInTheDocument()
         })
     })
