@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import type { AICategorizationResult } from '../../types/alert.ts'
+import type { AICategorizationResult } from '../../types/alert'
 
 export async function categorizeWithGemini(text: string): Promise<AICategorizationResult> {
   const apiKey = process.env.GEMINI_API_KEY
@@ -37,12 +37,26 @@ export async function categorizeWithGemini(text: string): Promise<AICategorizati
   
   // Clean up any extra whitespace
   content = content.trim()
-  
-  try {
-    return JSON.parse(content) as AICategorizationResult
-  } catch (error) {
-    console.error('Failed to parse Gemini response as JSON:', content)
-    throw new Error(`Invalid JSON response from Gemini: ${content}`)
-  }
+  return JSON.parse(content) as AICategorizationResult
 }
 
+export async function queryWithGemini(prompt: string): Promise<{summary: string}> {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY is not set')
+  }
+
+  const { GoogleGenerativeAI } = await import('@google/generative-ai')
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+  const model = genAI.getGenerativeModel({
+    model: process.env.GEMINI_MODEL || 'gemini-pro',
+    systemInstruction: `You are a helpful security assistant. Answer user questions based on provided security alerts. Be concise and helpful. Keep answers under 150 words.`,
+  })
+
+  const result = await model.generateContent(prompt)
+  let content = result.response.text()
+  
+  // Clean up any extra whitespace
+  content = content.trim()
+
+  return { summary: content }
+}

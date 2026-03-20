@@ -40,60 +40,36 @@ export async function categorizeWithOllama(text: string): Promise<AICategorizati
   
   console.log('Ollama raw content:', content)
   
-  try {
-    const result = JSON.parse(content) as AICategorizationResult
-    
-    // SECURITY VALIDATION: Never allow dangerous financial advice
-    if (result.suggested_action) {
-      const dangerousActions = [
-        'send', 'transfer', 'pay', 'wire', 'payment', 'money', 'funds'
-      ]
-      
-      const hasDangerousAction = dangerousActions.some(action => 
-        result.suggested_action.toLowerCase().includes(action)
-      )
-      
-      if (hasDangerousAction) {
-        console.error('🚨 DANGEROUS AI ADVICE DETECTED:', result.suggested_action)
-        
-        // Override with safe advice
-        result.suggested_action = 'DO NOT send money. Contact bank directly through official channels. Verify identity independently.'
-        result.reason = 'AI detected dangerous financial advice - this appears to be a scam requesting money transfers.'
-        result.confidence = 'high'
-      }
-    }
-    
-    console.log('Final AI result:', result)
-    return result
-  } catch (error) {
-    console.error('Failed to parse Ollama response:', content)
-    
-    // Fallback: Try to extract JSON from natural language response
-    try {
-      // Look for JSON-like patterns in the response
-      const jsonMatch = content.match(/\{[^}]+\}/)
-      if (jsonMatch) {
-        const extractedJson = JSON.parse(jsonMatch[0]) as AICategorizationResult
-        console.log('Extracted JSON from natural language:', extractedJson)
-        return extractedJson
-      }
-    } catch (extractError) {
-      console.error('Failed to extract JSON:', extractError)
-    }
-    
-    // Final fallback: Return a default categorization
-    const fallbackResult: AICategorizationResult = {
-      title: "Potential Scam - Review Required",
-      category: "Other",
-      severity: "high",
-      summary: "Message requests money or financial action - requires manual verification",
-      suggested_action: "DO NOT send money. Contact through official channels only. Verify independently.",
-      reason: "AI detected potential scam requesting money transfers",
-      confidence: "high"
-    }
-    
-    console.log('Using fallback categorization:', fallbackResult)
-    return fallbackResult
-  }
+  const result = JSON.parse(content) as AICategorizationResult
+  return result
+ 
 }
+
+
+export async function queryWithOllama(prompt: string): Promise<{summary: string}> {
+  if (!process.env.OLLAMA_BASE_URL) {
+    throw new Error('OLLAMA_BASE_URL is not set')
+  }
+
+  const response = await fetch(`${process.env.OLLAMA_BASE_URL}/api/generate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: process.env.OLLAMA_MODEL || 'llama2',
+      prompt: `You are a helpful security assistant. Answer user questions based on the provided security alerts. Be concise and helpful. Keep answers under 150 words.\n\n${prompt}`,
+      stream: false
+    })
+  })
+
+  if (!response.ok) {
+    throw new Error(`Ollama API returned ${response.status}`)
+  }
+
+  const data = await response.json()
+  return { summary: data.response?.trim() || 'No response generated' }
+}
+
+
 
