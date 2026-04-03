@@ -12,7 +12,7 @@ import SkeletonList from '@/components/SkeletonList'
 import { filterAlertsByConcerns } from '@/lib/categoryMatcher'
 import type { Alert } from '@/types/alert'
 
-type DigestTab = 'for-you' | 'all-active'
+type DigestTab = 'for-you' | 'all-critical'
 
 export default function DigestPage() {
     const { fetchAlerts } = useAlerts()
@@ -22,39 +22,51 @@ export default function DigestPage() {
     const preferences = useStore((s) => s.preferences)
     const loading = useStore((s) => s.loading)
 
+    // Local state for categories to decouple from global preferences
+    const [activeViewConcerns, setActiveViewConcerns] = useState<string[]>([])
     const [tab, setTab] = useState<DigestTab>('for-you')
     const [focusMode, setFocusMode] = useState(false)
     const [savingPrefs, setSavingPrefs] = useState(false)
     const [copied, setCopied] = useState(false)
 
-    const init = async () => {
-        // Only fetch alerts, preferences are loaded by PreferencesLoader
-        await fetchAlerts({ status: 'active' })
-    }
-
-    // Load everything on mount
+    // Load everything on mount and initialize local concerns from preferences
     useEffect(() => {
+        const init = async () => {
+            if (preferences?.concerns) {
+                setActiveViewConcerns(preferences.concerns)
+            }
+            // Broad fetch for Digest: all active alerts, limit 100 to ensure we see all criticals
+            await fetchAlerts({ status: 'unresolved', limit: 100 } as any)
+        }
         init()
-    }, []) // eslint-disable-line
+    }, [preferences?.concerns]) // eslint-disable-line
 
     // Active alerts only
     const activeAlerts = alerts.filter((a) => !a.resolved)
 
     // "For you" — filtered by concerns using smart matching, then critical severity only
-    const concerns = preferences?.concerns ?? []
+    const concerns = activeViewConcerns
     const concernFilteredAlerts: Alert[] = filterAlertsByConcerns(activeAlerts, concerns)
     const forYouAlerts: Alert[] = concernFilteredAlerts.filter((a) => a.severity === 'critical')
 
-    // "Directly affects me" — pinned at top
-    const affectsMeAlerts = forYouAlerts.filter((a) => a.affects_me)
-    const otherAlerts = forYouAlerts.filter((a) => !a.affects_me)
+    // "All Critical" — all critical alerts in the system, regardless of category
+    const allCriticalAlerts = activeAlerts.filter((a) => a.severity === 'critical')
 
-    const displayAlerts = tab === 'for-you' ? forYouAlerts : activeAlerts
+    // "Directly affects me" — any critical alert marked as personal
+    const affectsMeAlerts = activeAlerts.filter((a) => a.affects_me && a.severity === 'critical')
+
+    // "For you" alerts minus the ones already in affectsMe to avoid duplicates
+    const affectsMeIds = new Set(affectsMeAlerts.map((a) => a.id))
+    const otherAlerts = forYouAlerts.filter((a) => !affectsMeIds.has(a.id))
+
+    // "All critical" tab shows everyone, with affects_me first
+    const allCriticalOther = allCriticalAlerts.filter((a) => !affectsMeIds.has(a.id))
+
+    const displayAlerts = tab === 'for-you' ? [...affectsMeAlerts, ...otherAlerts] : [...affectsMeAlerts, ...allCriticalOther]
 
     const handleConcernsChange = async (concerns: string[]) => {
-        setSavingPrefs(true)
-        await updatePreferences({ concerns })
-        setSavingPrefs(false)
+        // Only update local view state, do NOT update global preferences
+        setActiveViewConcerns(concerns)
     }
 
     const handleShareDigest = () => {
@@ -125,8 +137,8 @@ export default function DigestPage() {
             <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800
                       rounded-lg w-fit">
                 {([
-                    { id: 'for-you', label: `For you (${forYouAlerts.length})` },
-                    { id: 'all-active', label: `All active (${activeAlerts.length})` },
+                    { id: 'for-you', label: `For you (${affectsMeAlerts.length + otherAlerts.length})` },
+                    { id: 'all-critical', label: `All critical (${affectsMeAlerts.length + allCriticalOther.length})` },
                 ] as { id: DigestTab; label: string }[]).map((t) => (
                     <button
                         key={t.id}
@@ -144,7 +156,7 @@ export default function DigestPage() {
 
             {/* Affects me section — pinned top */}
             {tab === 'for-you' && affectsMeAlerts.length > 0 && (
-                <div className="space-y-2">
+                <div className="flex flex-col gap-3">
                     <p className="text-xs font-medium text-blue-600 dark:text-blue-400
                          uppercase tracking-wide">
                         ⚡ Directly affects you
@@ -182,7 +194,7 @@ export default function DigestPage() {
                     )}
                 </div>
             ) : (
-                <div className="space-y-3">
+                <div className="flex flex-col gap-3">
                     {(tab === 'for-you' ? otherAlerts : displayAlerts).map((alert) => (
                         <AlertCard key={alert.id} alert={alert} />
                     ))}

@@ -21,6 +21,7 @@ export function useAlerts() {
                 if (filters?.search) params.search = filters.search
                 if (filters?.page) params.page = filters.page.toString()
                 if (filters?.limit) params.limit = filters.limit.toString()
+                if ((filters as any)?.view) params.view = (filters as any).view
 
                 const response = await apiClient.getAlerts(params)
                 

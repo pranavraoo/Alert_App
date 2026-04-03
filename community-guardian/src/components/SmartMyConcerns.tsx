@@ -14,18 +14,22 @@ interface Props {
 
 export default function SmartMyConcerns({ selected, onChange, saving }: Props) {
     const alerts = useStore((s) => s.alerts)
-    const [suggestedCategories, setSuggestedCategories] = useState<string[]>([])
-    const [dynamicCategories, setDynamicCategories] = useState<string[]>([])
-    const [showAdvanced, setShowAdvanced] = useState(false)
+    const [allKnownCategories, setAllKnownCategories] = useState<string[]>([])
+    const [showAdvanced, setShowAdvanced] = useState(true)
 
-    // Get dynamic categories from alerts and suggest base categories
+    // Maintain a persistent registry of every category we encounter
     useEffect(() => {
         const uniqueDynamics = getUniqueDynamicCategories(alerts)
-        setDynamicCategories(uniqueDynamics)
         
-        const suggested = suggestConcerns(uniqueDynamics)
-        setSuggestedCategories(suggested)
-    }, [alerts])
+        setAllKnownCategories(prev => {
+            // Combine: 
+            // 1. Current selected ones (must always be visible)
+            // 2. Already known ones (persistence)
+            // 3. New ones from alerts (discovery)
+            const combined = [...new Set([...selected, ...prev, ...uniqueDynamics])]
+            return combined.sort()
+        })
+    }, [alerts, selected])
 
     const toggle = (cat: string) => {
         if (selected.includes(cat)) {
@@ -78,86 +82,44 @@ export default function SmartMyConcerns({ selected, onChange, saving }: Props) {
                 </div>
             </div>
 
-            {/* Suggested Categories */}
-            {suggestedCategories.length > 0 && (
-                <div>
-                    <h4 className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">
-                        🎯 Suggested based on your alerts
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                        {suggestedCategories.map((cat) => {
-                            const isSelected = selected.includes(cat)
-                            return (
-                                <button
-                                    key={cat}
-                                    onClick={() => toggle(cat)}
-                                    disabled={saving}
-                                    aria-pressed={isSelected}
-                                    className={`px-3 py-1.5 rounded-full text-xs font-medium
-                                  border-2 transition-all
+            {/* Unified Category Selection */}
+            {allKnownCategories.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-1 transition-all duration-300">
+                    {allKnownCategories.map((cat) => {
+                        const isSelected = selected.includes(cat)
+                        
+                        return (
+                            <button
+                                key={cat}
+                                onClick={() => toggle(cat)}
+                                disabled={saving}
+                                aria-pressed={isSelected}
+                                className={`px-3 py-1.5 rounded-full text-xs font-medium
+                                  border-2 transition-all relative
                                   ${isSelected
-                                            ? `${getCategoryStyle(cat)} border-current scale-105`
+                                            ? `${getCategoryStyle(cat)} border-current scale-105 shadow-sm`
                                             : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500'
                                         }
                                   disabled:opacity-50 disabled:cursor-not-allowed`}
-                                >
-                                    {cat}
-                                </button>
-                            )
-                        })}
-                    </div>
-                </div>
-            )}
-
-            {/* Dynamic Categories */}
-            {dynamicCategories.length > 0 && (
-                <div>
-                    <button
-                        onClick={() => setShowAdvanced(!showAdvanced)}
-                        className="text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
-                    >
-                        {showAdvanced ? '▼' : '▶'} Advanced: All dynamic categories ({dynamicCategories.length})
-                    </button>
-                    
-                    {showAdvanced && (
-                        <div className="mt-2 flex flex-wrap gap-2">
-                            {dynamicCategories.map((cat) => {
-                                const isSelected = selected.includes(cat)
-                                const isSuggested = suggestedCategories.includes(cat)
-                                return (
-                                    <button
-                                        key={cat}
-                                        onClick={() => toggle(cat)}
-                                        disabled={saving}
-                                        aria-pressed={isSelected}
-                                        className={`px-3 py-1.5 rounded-full text-xs font-medium
-                                      border-2 transition-all relative
-                                      ${isSelected
-                                                ? `${getCategoryStyle(cat)} border-current scale-105`
-                                                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500'
-                                            }
-                                      disabled:opacity-50 disabled:cursor-not-allowed`}
-                                    >
-                                        {cat}
-                                        {isSuggested && (
-                                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full" title="Suggested" />
-                                        )}
-                                    </button>
-                                )
-                            })}
-                        </div>
-                    )}
+                            >
+                                {cat}
+                                {isSelected && (
+                                    <span className="ml-1 opacity-60">✓</span>
+                                )}
+                            </button>
+                        )
+                    })}
                 </div>
             )}
 
             {/* Quick Actions */}
             <div className="flex gap-2 pt-2">
                 <button
-                    onClick={() => onChange(suggestedCategories)}
-                    disabled={saving || suggestedCategories.length === 0}
+                    onClick={() => onChange(allKnownCategories)}
+                    disabled={saving || allKnownCategories.length === 0}
                     className="text-xs px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg border border-blue-200 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                    Select all suggested
+                    Select all
                 </button>
                 
                 <button

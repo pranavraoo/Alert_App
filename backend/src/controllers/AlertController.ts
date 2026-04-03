@@ -20,6 +20,7 @@ export class AlertController {
         location, 
         affects_me, 
         search,
+        view,
         page = '1',
         limit = '10'
       } = req.query
@@ -30,8 +31,9 @@ export class AlertController {
         status: status as string,
         source: source as string,
         location: location as string,
-        affects_me: affects_me === 'true',
+        ...(affects_me !== undefined ? { affects_me: affects_me === 'true' } : {}),
         search: search as string,
+        view: view as string,
         page: parseInt(page as string) || 1,
         limit: parseInt(limit as string) || 10
       }

@@ -1,14 +1,16 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
+import { apiClient } from '@/lib/api-client'
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip,
     ResponsiveContainer, Legend,
 } from 'recharts'
 import type { Alert } from '@/types/alert'
+import type { Filters } from '@/components/SmartFilterBar'
 
 interface Props {
-    alerts: Alert[]
+    filters: Filters
 }
 
 const SEVERITY_COLORS = {
@@ -21,25 +23,28 @@ const SEVERITY_COLORS = {
 type DateRange = '7d' | '14d' | '30d' | 'custom'
 
 function getDateRange(range: DateRange, customStart?: string, customEnd?: string): string[] {
-    if (range === 'custom' && customStart && customEnd) {
+    if (range === 'custom') {
+        if (!customStart || !customEnd) return []
         const start = new Date(customStart)
         const end = new Date(customEnd)
         const days: string[] = []
-        
-        // Create a new date object for each iteration to avoid mutation
         for (let d = new Date(start); d <= end;) {
             days.push(d.toISOString().split('T')[0])
-            // Move to next day
             d = new Date(d)
-            d.setDate(d.getDate() + 1)
+            d.setUTCDate(d.getUTCDate() + 1)
         }
         return days
     }
 
     const days = range === '7d' ? 7 : range === '14d' ? 14 : 30
+    // Use the current UTC date as a fixed baseline to generate strings
+    // matching how alerts are stored in the database (YYYY-MM-DD UTC)
+    const todayStr = new Date().toISOString().split('T')[0]
+    const base = new Date(`${todayStr}T00:00:00Z`)
+    
     return Array.from({ length: days }, (_, i) => {
-        const d = new Date()
-        d.setDate(d.getDate() - (days - 1 - i))
+        const d = new Date(base)
+        d.setUTCDate(d.getUTCDate() - (days - 1 - i))
         return d.toISOString().split('T')[0]
     })
 }
@@ -80,57 +85,67 @@ function getInsights(data: any[]): { trend: string, recommendation: string, crit
     return { trend, recommendation, criticalPercent, highCriticalPercent }
 }
 
-export default function TrendChart({ alerts }: Props) {
+export default function TrendChart({ filters }: Props) {
+    const [chartAlerts, setChartAlerts] = useState<Alert[]>([])
     const [open, setOpen] = useState(false)
     const [dateRange, setDateRange] = useState<DateRange>('14d')
     const [customStart, setCustomStart] = useState('')
     const [customEnd, setCustomEnd] = useState('')
 
-    const data = useMemo(() => {
-        const days = getDateRange(dateRange, customStart, customEnd)
-        
-        return days.map((day) => {
-            // Use 'date' field for custom ranges, 'created_at' for preset ranges
-            const dayAlerts = alerts.filter((a) => {
-                if (dateRange === 'custom') {
-                    return a.date && a.date === day
-                } else {
-                    return a.created_at && a.created_at.startsWith(day)
+    useEffect(() => {
+        // ALWAYS fetch from page 1 for the chart to ensure we get historical data
+        // Explicitly ignore 'search', 'status', and 'page' filters for the trend chart
+        // This makes the chart a stable baseline of overall community activity
+        const { search, status, page, ...stableFilters } = filters;
+        apiClient.getAlerts({ ...stableFilters, page: 1, limit: 1000 })
+            .then(res => {
+                if (res?.data?.data) {
+                    setChartAlerts(res.data.data)
                 }
             })
-            return {
-                date: day.slice(5),   // MM-DD
-                fullDate: day,
-                low: dayAlerts.filter((a) => a.severity === 'low').length,
-                medium: dayAlerts.filter((a) => a.severity === 'medium').length,
-                high: dayAlerts.filter((a) => a.severity === 'high').length,
-                critical: dayAlerts.filter((a) => a.severity === 'critical').length,
-            }
-        })
-    }, [alerts, dateRange, customStart, customEnd])
+            .catch(err => console.error("Could not load trend data", err))
+    }, [filters])
 
-    const hasData = data.some(
-        (d) => d.low + d.medium + d.high + d.critical > 0
-    )
-
-    // Get available date range for better UX
+    // Calculate earliest and latest dates available in the filtered dataset
     const availableDateRange = useMemo(() => {
-        if (alerts.length === 0) return null
+        if (chartAlerts.length === 0) return null
         
-        // Use 'date' field for custom ranges, 'created_at' for preset ranges
-        const dates = alerts
-            .map(a => dateRange === 'custom' ? a.date : a.created_at?.split('T')[0])
+        const dates = chartAlerts
+            .map(a => a.created_at ? a.created_at.split('T')[0] : a.date)
             .filter(Boolean)
             .sort()
-        
-        if (dates.length === 0) return null
-        
+            
         return {
             earliest: dates[0],
             latest: dates[dates.length - 1],
             count: dates.length
         }
-    }, [alerts, dateRange])
+    }, [chartAlerts])
+
+    const data = useMemo(() => {
+        const days = getDateRange(dateRange, customStart, customEnd)
+        
+        return days.map((day) => {
+            // Unify date extraction - handle Date objects, strings, and nulls
+            const dayAlerts = chartAlerts.filter((a) => {
+                const rawDate = a.created_at || a.date
+                if (!rawDate) return false
+                const alertDate = (typeof rawDate === 'string' ? rawDate : (rawDate as any).toISOString()).split('T')[0]
+                return alertDate === day
+            })
+            return {
+                date: day.slice(5),   // MM-DD
+                fullDate: day,
+                // Use lowercase comparison to handle potential case mismatches
+                low: dayAlerts.filter((a) => a.severity?.toLowerCase() === 'low').length,
+                medium: dayAlerts.filter((a) => a.severity?.toLowerCase() === 'medium').length,
+                high: dayAlerts.filter((a) => a.severity?.toLowerCase() === 'high').length,
+                critical: dayAlerts.filter((a) => a.severity?.toLowerCase() === 'critical').length,
+            }
+        })
+    }, [chartAlerts, dateRange, customStart, customEnd])
+
+    const hasData = chartAlerts.length > 0
 
     const insights = useMemo(() => getInsights(data), [data])
 
@@ -184,22 +199,39 @@ export default function TrendChart({ alerts }: Props) {
                         <div className="flex gap-2 items-center">
                             <input
                                 type="date"
+                                max="9999-12-31"
                                 value={customStart}
-                                onChange={(e) => setCustomStart(e.target.value)}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    // Basic character check for year segments
+                                    if (val.split('-')[0]?.length <= 4) setCustomStart(val);
+                                }}
                                 className="px-2 py-1 text-xs border border-slate-200 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300"
                                 placeholder="Start date"
                             />
                             <span className="text-xs text-slate-400">to</span>
                             <input
                                 type="date"
+                                max="9999-12-31"
                                 value={customEnd}
-                                onChange={(e) => setCustomEnd(e.target.value)}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val.split('-')[0]?.length <= 4) setCustomEnd(val);
+                                }}
                                 className="px-2 py-1 text-xs border border-slate-200 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300"
                                 placeholder="End date"
                             />
+                            {(customStart || customEnd) && (
+                                <button
+                                    onClick={() => { setCustomStart(''); setCustomEnd('') }}
+                                    className="text-xs px-2 py-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+                                    aria-label="Clear dates"
+                                >
+                                    Clear
+                                </button>
+                            )}
                         </div>
                     )}
-
                     {/* Insights */}
                     {insights && (
                         <div className={`p-3 rounded-lg border ${

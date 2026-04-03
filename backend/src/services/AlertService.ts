@@ -13,6 +13,7 @@ export interface AlertFilters {
   search?: string
   page?: number
   limit?: number
+  view?: string  // 'digest' for strict filtering, undefined for normal
 }
 
 export interface CreateAlertData {
@@ -59,23 +60,36 @@ export class AlertService {
     const locationRadius = userPrefs?.location_radius || 25
     const locationEnabled = userPrefs?.location_enabled || false
 
+    // Track preference-based filters that should be bypassed by affects_me
+    const preferenceConditions: any[] = []
+    const isDigestView = filters.view === 'digest'
+
     // Build where clause based on filters
-    if (filters.category) {
+    if (filters.category && filters.category.trim() !== '') {
       where.category = filters.category
-    } else if (userConcerns.length > 0) {
-      // Smart semantic matching of user concerns to categories
+    } else if (isDigestView && userConcerns.length > 0) {
+      // Digest view: strict concern filtering — only if user has concerns set
       const matchedCategories = SmartCategoryMatcher.matchConcernsToCategories(userConcerns)
-      
+      preferenceConditions.push({ category: { in: matchedCategories } })
+    } else if (userConcerns.length > 0 && filters.limit !== 1000) {
+      // Normal view: only apply concern filter if user has concerns set
+      // Bypass for Trend Chart (limit=1000) to ensure historical trend volume
+      const matchedCategories = SmartCategoryMatcher.matchConcernsToCategories(userConcerns)
       if (matchedCategories.length > 0) {
-        where.category = { in: matchedCategories }
+        preferenceConditions.push({ category: { in: matchedCategories } })
       }
     }
 
     if (filters.severity) {
       where.severity = filters.severity
-    } else if (userSeverities.length > 0) {
-      // If no explicit severity filter but user has severity preferences, filter by severities
-      where.severity = { in: userSeverities }
+    } else if (isDigestView) {
+      // Digest view: default to high and critical
+      const severities = userSeverities.length > 0 ? userSeverities : ['high', 'critical']
+      preferenceConditions.push({ severity: { in: severities } })
+    } else if (userSeverities.length > 0 && filters.limit !== 1000) {
+      // Normal view: only apply severity filter if user has preferences
+      // Bypass for Trend Chart (limit=1000) to ensure historical trend volume
+      preferenceConditions.push({ severity: { in: userSeverities } })
     }
 
     if (filters.status === 'resolved') {
@@ -86,24 +100,22 @@ export class AlertService {
     if (filters.source) {
       where.source = filters.source
     }
-    if (filters.location) {
+    if (filters.location && filters.location.trim() !== '') {
       where.location = { contains: filters.location, mode: 'insensitive' }
     } else if (locationEnabled && userLocation) {
-      // Apply location-based filtering using user's location and radius
-      // For now, we'll include alerts with location data
-      // In a production system, you'd use spatial queries with PostGIS
       where.OR = [
         { location: { contains: 'Nationwide' } },
         { location: { not: null } }
       ]
     }
-    if (filters.affects_me !== undefined) {
-      where.affects_me = filters.affects_me
+    if (filters.affects_me === true) {
+      // Only filter strictly by affects_me if it's explicitly turned ON
+      where.affects_me = true
     }
     if (filters.verification_status) {
       where.verification_status = filters.verification_status
     }
-    if (filters.search) {
+    if (filters.search && filters.search.trim() !== '') {
       where.OR = [
         { title: { contains: filters.search, mode: 'insensitive' } },
         { description: { contains: filters.search, mode: 'insensitive' } },
@@ -112,9 +124,47 @@ export class AlertService {
       ]
     }
 
+    // Apply preference conditions
+    if (preferenceConditions.length > 0) {
+      const prefsAnd = preferenceConditions.length === 1 
+        ? preferenceConditions[0] 
+        : { AND: preferenceConditions }
+
+      if (isDigestView) {
+        // Digest view: NO affects_me bypass — strict filtering only
+        if (where.OR) {
+          const existingOr = where.OR
+          delete where.OR
+          where.AND = [
+            { OR: existingOr },
+            prefsAnd
+          ]
+        } else {
+          Object.assign(where, prefsAnd.AND ? { AND: prefsAnd.AND } : prefsAnd)
+        }
+      } else if (filters.affects_me === undefined) {
+        // Normal view: affects_me=true bypasses preference filters
+        if (where.OR) {
+          const existingOr = where.OR
+          delete where.OR
+          where.AND = [
+            { OR: existingOr },
+            { OR: [prefsAnd, { affects_me: true }] }
+          ]
+        } else {
+          where.OR = [prefsAnd, { affects_me: true }]
+        }
+      } else {
+        // affects_me is explicitly filtered, apply prefs directly
+        for (const cond of preferenceConditions) {
+          Object.assign(where, cond)
+        }
+      }
+    }
+
     // Calculate pagination
     const page = filters.page || 1
-    const limit = Math.min(filters.limit || 10, 100) // Default 10 per page, max 100 per page
+    const limit = Math.min(filters.limit || 10, 1000) // Default 10 per page, max 1000 per page
     const skip = (page - 1) * limit
 
     // Get total count for pagination

@@ -108,7 +108,7 @@ export default function AlertsPage() {
       <ThreatQuery />
 
       {/* Trend Chart */}
-      <TrendChart alerts={alerts} />
+      <TrendChart filters={filters} />
 
       {/* Filter Bar */}
       <SmartFilterBar
@@ -131,7 +131,7 @@ export default function AlertsPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           {alerts.map((alert) => (
             <AlertCard key={alert.id} alert={alert} />
           ))}
@@ -143,6 +143,14 @@ export default function AlertsPage() {
                 Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} alerts
               </div>
               <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => goToPage(1)}
+                  disabled={!pagination.hasPrev}
+                  className="px-3 py-1 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700"
+                  aria-label="First page"
+                >
+                  «
+                </button>
                 <button
                   onClick={() => goToPage(pagination.page - 1)}
                   disabled={!pagination.hasPrev}
@@ -159,6 +167,14 @@ export default function AlertsPage() {
                   className="px-3 py-1 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700"
                 >
                   Next
+                </button>
+                <button
+                  onClick={() => goToPage(pagination.pages)}
+                  disabled={!pagination.hasNext}
+                  className="px-3 py-1 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700"
+                  aria-label="Last page"
+                >
+                  »
                 </button>
               </div>
             </div>

@@ -13,7 +13,7 @@
     "location": "Nationwide",
     "date": "2024-03-01",
     "resolved": false,
-    "affects_me": false,
+    "affects_me": true,
     "created_at": "2024-03-01T10:00:00Z"
   },
   {
@@ -64,7 +64,7 @@
     "location": "Springfield, IL",
     "date": "2024-03-04",
     "resolved": false,
-    "affects_me": false,
+    "affects_me": true,
     "created_at": "2024-03-04T16:45:00Z"
   },
   {
@@ -98,7 +98,7 @@
     "location": "Global",
     "date": "2024-03-06",
     "resolved": false,
-    "affects_me": false,
+    "affects_me": true,
     "created_at": "2024-03-06T13:00:00Z"
   },
   {
@@ -166,7 +166,7 @@
     "location": "Riverside County",
     "date": "2024-03-10",
     "resolved": false,
-    "affects_me": false,
+    "affects_me": true,
     "created_at": "2024-03-10T16:30:00Z"
   },
   {
@@ -200,7 +200,7 @@
     "location": "Global",
     "date": "2024-03-12",
     "resolved": false,
-    "affects_me": false,
+    "affects_me": true,
     "created_at": "2024-03-12T12:00:00Z"
   },
   {
