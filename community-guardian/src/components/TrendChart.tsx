@@ -96,7 +96,7 @@ export default function TrendChart({ filters }: Props) {
         // ALWAYS fetch from page 1 for the chart to ensure we get historical data
         // Explicitly ignore 'search', 'status', and 'page' filters for the trend chart
         // This makes the chart a stable baseline of overall community activity
-        const { search, status, page, ...stableFilters } = filters;
+        const { search, status, ...stableFilters } = filters;
         apiClient.getAlerts({ ...stableFilters, page: 1, limit: 1000 })
             .then(res => {
                 if (res?.data?.data) {

@@ -17,6 +17,7 @@ export interface Filters {
     source: string
     location: string
     affects_me: boolean
+    page: number
 }
 
 export const DEFAULT_FILTERS: Filters = {
@@ -27,6 +28,7 @@ export const DEFAULT_FILTERS: Filters = {
     source: '',
     location: '',
     affects_me: false,
+    page: 1,
 }
 
 interface Props {
@@ -38,7 +40,7 @@ interface Props {
 export default function SmartFilterBar({ filters, onChange, total }: Props) {
     const [showFilters, setShowFilters] = useState(false)
     const alerts = useStore((s) => s.alerts)
-    
+
     // Get dynamic categories from current alerts
     const dynamicCategories = getUniqueDynamicCategories(alerts)
     const allCategories = [...new Set([...dynamicCategories, ...['Scam', 'Phishing', 'Imposter', 'Data breach', 'Local safety', 'CVE', 'Other']])]
@@ -70,7 +72,7 @@ export default function SmartFilterBar({ filters, onChange, total }: Props) {
 
     // Calculate filtered count for preview
     const filteredAlerts = alerts.filter(alert => {
-        if (filters.search && !alert.title.toLowerCase().includes(filters.search.toLowerCase()) && 
+        if (filters.search && !alert.title.toLowerCase().includes(filters.search.toLowerCase()) &&
             !alert.description.toLowerCase().includes(filters.search.toLowerCase())) {
             return false
         }
@@ -150,11 +152,6 @@ export default function SmartFilterBar({ filters, onChange, total }: Props) {
                         Clear
                     </button>
                 )}
-
-                {/* Results count */}
-                <div className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">
-                    {filteredAlerts.length} of {total} results
-                </div>
             </div>
 
             {/* Filter panel */}

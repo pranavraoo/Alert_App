@@ -8,7 +8,7 @@ export function useAlerts() {
     const store = useStore()
 
     const fetchAlerts = useCallback(
-        async (filters?: Partial<Filters>) => {
+        async (filters?: Partial<Filters & { page?: number; limit?: number; view?: string }>) => {
             store.setLoading(true)
             try {
                 const params: Record<string, any> = {}

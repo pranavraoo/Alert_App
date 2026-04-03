@@ -9,6 +9,7 @@ import SafetyPulse from '@/components/SafetyPulse'
 import SmartMyConcerns from '@/components/SmartMyConcerns'
 import FocusMode from '@/components/FocusMode'
 import SkeletonList from '@/components/SkeletonList'
+import CommonPagination from '@/components/CommonPagination'
 import { filterAlertsByConcerns } from '@/lib/categoryMatcher'
 import type { Alert } from '@/types/alert'
 
@@ -28,6 +29,8 @@ export default function DigestPage() {
     const [focusMode, setFocusMode] = useState(false)
     const [savingPrefs, setSavingPrefs] = useState(false)
     const [copied, setCopied] = useState(false)
+    const [currentPage, setCurrentPage] = useState(1)
+    const PAGE_SIZE = 10
 
     // Load everything on mount and initialize local concerns from preferences
     useEffect(() => {
@@ -41,12 +44,19 @@ export default function DigestPage() {
         init()
     }, [preferences?.concerns]) // eslint-disable-line
 
+    // Reset pagination when tab or concerns change
+    useEffect(() => {
+        setCurrentPage(1)
+    }, [tab, activeViewConcerns])
+
     // Active alerts only
     const activeAlerts = alerts.filter((a) => !a.resolved)
 
     // "For you" — filtered by concerns using smart matching, then critical severity only
     const concerns = activeViewConcerns
-    const concernFilteredAlerts: Alert[] = filterAlertsByConcerns(activeAlerts, concerns)
+    const concernFilteredAlerts: Alert[] = concerns.length > 0 
+        ? filterAlertsByConcerns(activeAlerts, concerns)
+        : []
     const forYouAlerts: Alert[] = concernFilteredAlerts.filter((a) => a.severity === 'critical')
 
     // "All Critical" — all critical alerts in the system, regardless of category
@@ -63,6 +73,11 @@ export default function DigestPage() {
     const allCriticalOther = allCriticalAlerts.filter((a) => !affectsMeIds.has(a.id))
 
     const displayAlerts = tab === 'for-you' ? [...affectsMeAlerts, ...otherAlerts] : [...affectsMeAlerts, ...allCriticalOther]
+
+    // Pagination logic
+    const totalItems = displayAlerts.length
+    const totalPages = Math.ceil(totalItems / PAGE_SIZE)
+    const paginatedAlerts = displayAlerts.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
     const handleConcernsChange = async (concerns: string[]) => {
         // Only update local view state, do NOT update global preferences
@@ -195,9 +210,24 @@ export default function DigestPage() {
                 </div>
             ) : (
                 <div className="flex flex-col gap-3">
-                    {(tab === 'for-you' ? otherAlerts : displayAlerts).map((alert) => (
+                    {paginatedAlerts.map((alert) => (
                         <AlertCard key={alert.id} alert={alert} />
                     ))}
+                    
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                        <div className="pt-4">
+                            <CommonPagination
+                                page={currentPage}
+                                pages={totalPages}
+                                hasNext={currentPage < totalPages}
+                                hasPrev={currentPage > 1}
+                                onPageChange={setCurrentPage}
+                                total={totalItems}
+                                limit={PAGE_SIZE}
+                            />
+                        </div>
+                    )}
                 </div>
             )}
 

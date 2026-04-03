@@ -17,8 +17,6 @@ export interface Filters {
     location: string
     affects_me: boolean
     verification_status: string
-    page: number
-    limit: number
 }
 
 export const DEFAULT_FILTERS: Filters = {
@@ -30,8 +28,6 @@ export const DEFAULT_FILTERS: Filters = {
     location: '',
     affects_me: false,
     verification_status: '',
-    page: 1,
-    limit: 10,
 }
 
 interface Props {
@@ -235,18 +231,6 @@ export default function FilterBar({ filters, onChange, total }: Props) {
                     </select>
                 </div>
             )}
-
-            {/* Result count */}
-            <p
-                className="text-xs text-slate-500 dark:text-slate-400"
-                aria-live="polite"
-                aria-atomic="true"
-            >
-                {isFiltered
-                    ? `${total} alert${total !== 1 ? 's' : ''} match your filters`
-                    : `${total} alert${total !== 1 ? 's' : ''} total`
-                }
-            </p>
         </div>
     )
 }

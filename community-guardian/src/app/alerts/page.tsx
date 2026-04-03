@@ -9,6 +9,7 @@ import ThreatQuery from '@/components/ThreatQuery'
 import SmartFilterBar, { DEFAULT_FILTERS, type Filters } from '@/components/SmartFilterBar'
 import SkeletonList from '@/components/SkeletonList'
 import TrendChart from '@/components/TrendChart'
+import CommonPagination from '@/components/CommonPagination'
 import type { Alert } from '@/types/alert'
 
 export default function AlertsPage() {
@@ -136,47 +137,18 @@ export default function AlertsPage() {
             <AlertCard key={alert.id} alert={alert} />
           ))}
           
-          {/* Pagination Controls */}
+          {/* Pagination */}
           {pagination.pages > 1 && (
-            <div className="flex items-center justify-between py-4 border-t border-slate-200 dark:border-slate-700">
-              <div className="text-sm text-slate-600 dark:text-slate-400">
-                Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} alerts
-              </div>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => goToPage(1)}
-                  disabled={!pagination.hasPrev}
-                  className="px-3 py-1 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700"
-                  aria-label="First page"
-                >
-                  «
-                </button>
-                <button
-                  onClick={() => goToPage(pagination.page - 1)}
-                  disabled={!pagination.hasPrev}
-                  className="px-3 py-1 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700"
-                >
-                  Previous
-                </button>
-                <span className="text-sm text-slate-600 dark:text-slate-400">
-                  Page {pagination.page} of {pagination.pages}
-                </span>
-                <button
-                  onClick={() => goToPage(pagination.page + 1)}
-                  disabled={!pagination.hasNext}
-                  className="px-3 py-1 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700"
-                >
-                  Next
-                </button>
-                <button
-                  onClick={() => goToPage(pagination.pages)}
-                  disabled={!pagination.hasNext}
-                  className="px-3 py-1 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700"
-                  aria-label="Last page"
-                >
-                  »
-                </button>
-              </div>
+            <div className="mt-8">
+              <CommonPagination
+                page={pagination.page}
+                pages={pagination.pages}
+                hasNext={pagination.hasNext}
+                hasPrev={pagination.hasPrev}
+                onPageChange={goToPage}
+                total={pagination.total}
+                limit={pagination.limit}
+              />
             </div>
           )}
         </div>
