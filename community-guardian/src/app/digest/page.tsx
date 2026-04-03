@@ -169,24 +169,6 @@ export default function DigestPage() {
                 ))}
             </div>
 
-            {/* Affects me section — pinned top */}
-            {tab === 'for-you' && affectsMeAlerts.length > 0 && (
-                <div className="flex flex-col gap-3">
-                    <p className="text-xs font-medium text-blue-600 dark:text-blue-400
-                         uppercase tracking-wide">
-                        ⚡ Directly affects you
-                    </p>
-                    {affectsMeAlerts.map((alert) => (
-                        <AlertCard key={alert.id} alert={alert} />
-                    ))}
-                    {otherAlerts.length > 0 && (
-                        <p className="text-xs font-medium text-slate-500 dark:text-slate-400
-                           uppercase tracking-wide pt-2">
-                            Other alerts
-                        </p>
-                    )}
-                </div>
-            )}
 
             {/* Alert list */}
             {loading ? (
@@ -210,9 +192,30 @@ export default function DigestPage() {
                 </div>
             ) : (
                 <div className="flex flex-col gap-3">
-                    {paginatedAlerts.map((alert) => (
-                        <AlertCard key={alert.id} alert={alert} />
-                    ))}
+                    {currentPage === 1 && affectsMeAlerts.length > 0 && (
+                        <p className="text-xs font-semibold text-blue-600 dark:text-blue-400
+                             uppercase tracking-widest bg-blue-50/50 dark:bg-blue-900/20 
+                             px-3 py-1.5 rounded-lg border border-blue-100 dark:border-blue-800/50 w-fit">
+                            ⚡ Directly affects you
+                        </p>
+                    )}
+                    
+                    {paginatedAlerts.map((alert, idx) => {
+                        const firstOtherId = tab === 'for-you' ? otherAlerts[0]?.id : allCriticalOther[0]?.id
+                        const isFirstOther = alert.id === firstOtherId
+                        
+                        return (
+                            <div key={alert.id} className="flex flex-col gap-3">
+                                {isFirstOther && (
+                                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400
+                                         uppercase tracking-widest pt-4 pb-1 border-b border-slate-100 dark:border-slate-800/50 mb-1">
+                                        Community Alerts
+                                    </p>
+                                )}
+                                <AlertCard alert={alert} />
+                            </div>
+                        )
+                    })}
                     
                     {/* Pagination */}
                     {totalPages > 1 && (

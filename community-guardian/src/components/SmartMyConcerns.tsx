@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react'
 import { CATEGORY_STYLES } from '@/lib/constants'
 import { useStore } from '@/store/useStore'
-import { getUniqueDynamicCategories, suggestConcerns, filterAlertsByConcerns } from '@/lib/categoryMatcher'
-import type { Alert } from '@/types/alert'
+import { getUniqueDynamicCategories } from '@/lib/categoryMatcher'
 
 interface Props {
     selected: string[]
@@ -15,12 +14,11 @@ interface Props {
 export default function SmartMyConcerns({ selected, onChange, saving }: Props) {
     const alerts = useStore((s) => s.alerts)
     const [allKnownCategories, setAllKnownCategories] = useState<string[]>([])
-    const [showAdvanced, setShowAdvanced] = useState(true)
 
     // Maintain a persistent registry of every category we encounter
     useEffect(() => {
         const uniqueDynamics = getUniqueDynamicCategories(alerts)
-        
+
         setAllKnownCategories(prev => {
             // Combine: 
             // 1. Current selected ones (must always be visible)
@@ -45,7 +43,7 @@ export default function SmartMyConcerns({ selected, onChange, saving }: Props) {
         if (CATEGORY_STYLES[category as keyof typeof CATEGORY_STYLES]) {
             return CATEGORY_STYLES[category as keyof typeof CATEGORY_STYLES]
         }
-        
+
         // Generate style for dynamic categories
         const hash = category.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
         const colors = [
@@ -59,27 +57,19 @@ export default function SmartMyConcerns({ selected, onChange, saving }: Props) {
         return colors[hash % colors.length]
     }
 
-    // Preview how many alerts will be shown
-    const filteredAlerts = filterAlertsByConcerns(alerts, selected)
-    const totalActive = alerts.filter(a => !a.resolved).length
-
     return (
         <div className="space-y-4">
-            <div>
-                <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                    What matters to you?
+            <div className="pb-1">
+                <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <span>What matters to you?</span>
+                    <span className="px-1.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-[10px] text-blue-600 dark:text-blue-400 font-bold border border-blue-100 dark:border-blue-800">
+                        Smart Feed
+                    </span>
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Smart prioritization for dynamic categories.
-                    {selected.length === 0 && ' Select categories or leave empty to see everything.'}
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed max-w-lg">
+                    Select the categories you care about most. Your personal digest will prioritize these topics, 
+                    ensuring you never miss critical updates in your areas of interest.
                 </p>
-            </div>
-
-            {/* Preview */}
-            <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
-                <div className="text-xs text-slate-600 dark:text-slate-400">
-                    Showing <span className="font-semibold text-slate-800 dark:text-slate-200">{filteredAlerts.length}</span> of {totalActive} active alerts
-                </div>
             </div>
 
             {/* Unified Category Selection */}
@@ -87,7 +77,7 @@ export default function SmartMyConcerns({ selected, onChange, saving }: Props) {
                 <div className="flex flex-wrap gap-2 pt-1 transition-all duration-300">
                     {allKnownCategories.map((cat) => {
                         const isSelected = selected.includes(cat)
-                        
+
                         return (
                             <button
                                 key={cat}
@@ -97,9 +87,9 @@ export default function SmartMyConcerns({ selected, onChange, saving }: Props) {
                                 className={`px-3 py-1.5 rounded-full text-xs font-medium
                                   border-2 transition-all relative
                                   ${isSelected
-                                            ? `${getCategoryStyle(cat)} border-current scale-105 shadow-sm`
-                                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500'
-                                        }
+                                        ? `${getCategoryStyle(cat)} border-current scale-105 shadow-sm`
+                                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500'
+                                    }
                                   disabled:opacity-50 disabled:cursor-not-allowed`}
                             >
                                 {cat}
@@ -121,7 +111,7 @@ export default function SmartMyConcerns({ selected, onChange, saving }: Props) {
                 >
                     Select all
                 </button>
-                
+
                 <button
                     onClick={() => onChange([])}
                     disabled={saving}

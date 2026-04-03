@@ -25,17 +25,17 @@ const SEVERITY_BORDER: Record<string, string> = {
 }
 
 const SEVERITY_BG: Record<string, string> = {
-    critical: 'from-red-500/[0.07]    to-transparent',
-    high:     'from-orange-400/[0.07] to-transparent',
-    medium:   'from-amber-400/[0.05]  to-transparent',
-    low:      'from-emerald-400/[0.05] to-transparent',
+    critical: 'from-red-500/[0.08]    via-red-500/[0.02]    to-transparent',
+    high:     'from-orange-400/[0.08] via-orange-400/[0.02] to-transparent',
+    medium:   'from-amber-400/[0.06]  via-amber-400/[0.01]  to-transparent',
+    low:      'from-emerald-400/[0.08] via-teal-400/[0.03]   to-transparent',
 }
 
 const SEVERITY_GLOW: Record<string, string> = {
-    critical: 'hover:shadow-red-100/60    dark:hover:shadow-red-900/20',
-    high:     'hover:shadow-orange-100/60 dark:hover:shadow-orange-900/20',
-    medium:   'hover:shadow-amber-100/60  dark:hover:shadow-amber-900/20',
-    low:      'hover:shadow-emerald-100/60 dark:hover:shadow-emerald-900/20',
+    critical: 'hover:shadow-red-200/40    dark:hover:shadow-red-900/30',
+    high:     'hover:shadow-orange-200/40 dark:hover:shadow-orange-900/30',
+    medium:   'hover:shadow-amber-200/40  dark:hover:shadow-amber-900/30',
+    low:      'hover:shadow-emerald-200/40 dark:hover:shadow-emerald-900/30',
 }
 
 const SEVERITY_DOT: Record<string, string> = {
@@ -118,9 +118,27 @@ export default function AlertCard({ alert }: Props) {
                 {/* ── Row 1: Category · Severity · Date ─────────────────── */}
                 <div className="flex items-center justify-between mb-2.5">
                     <div className="flex items-center gap-3">
-                        {/* Category chip — subtle, not loud */}
-                        <span className="text-[11px] font-semibold uppercase tracking-widest
-                                         text-slate-400 dark:text-slate-500">
+                        {/* Category chip — distinctive color coding */}
+                        <span className={`
+                            text-[10px] sm:text-[11px] font-bold uppercase tracking-wider
+                            px-2 py-0.5 rounded-md border
+                            ${(() => {
+                                const style = CATEGORY_STYLES[alert.category as keyof typeof CATEGORY_STYLES]
+                                if (style) return style + ' border-current/20'
+                                
+                                // Fallback for dynamic categories (hash-based color)
+                                const hash = alert.category.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+                                const colors = [
+                                    'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800',
+                                    'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/40 dark:text-green-300 dark:border-green-800',
+                                    'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/40 dark:text-purple-300 dark:border-purple-800',
+                                    'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800',
+                                    'bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/40 dark:text-rose-300 dark:border-rose-800',
+                                    'bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-800',
+                                ]
+                                return colors[hash % colors.length]
+                            })()}
+                        `}>
                             {alert.category}
                         </span>
 
