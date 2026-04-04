@@ -18,14 +18,14 @@ export async function categorizeText(text: string): Promise<AICategorizationResu
   }
 }
 
-export async function queryWithAI(prompt: string): Promise<{summary: string}> {
+export async function queryWithAI(prompt: string, mode: 'narrative' | 'report' = 'narrative'): Promise<{summary: string}> {
   const provider = (process.env.AI_PROVIDER ?? 'gemini').toLowerCase()
   
   try {
     if (provider === 'ollama') {
-      return await queryWithOllama(prompt)
+      return await queryWithOllama(prompt, mode)
     }
-    return await queryWithGemini(prompt)
+    return await queryWithGemini(prompt, mode)
   } catch (error) {
     console.warn('AI query failed, using fallback:', error)
     // Instead of generic message, throw error to let QueryController handle smart matching
