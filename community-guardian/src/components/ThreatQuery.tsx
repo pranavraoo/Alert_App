@@ -127,7 +127,11 @@ export default function ThreatQuery() {
                                      prose-p:mb-2 prose-strong:text-blue-600 dark:prose-strong:text-blue-400
                                      prose-ul:my-1.5 prose-ul:list-disc prose-ul:ml-4 prose-li:my-0.5">
                             <ReactMarkdown>
-                                {answer.replace(/\n([-*] )/g, '\n\n$1').replace(/\n(### )/g, '\n\n$1')}
+                                {answer
+                                    .replace(/^### /g, '\n### ') // Ensure first header has newline if at start
+                                    .replace(/\n(### [^\n]+)/g, '\n\n$1') // Double newline before all headers
+                                    .replace(/\n([-*] )/g, '\n\n$1') // Double newline before all bullets
+                                    .trim()}
                             </ReactMarkdown>
                         </div>
 

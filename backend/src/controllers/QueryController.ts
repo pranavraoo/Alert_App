@@ -96,32 +96,61 @@ export class QueryController {
   }
 
   private async queryWithAI(question: string, alerts: any[]): Promise<{answer: string, referencedAlerts: any[]}> {
-    // Use AI to understand the question and generate an answer
-    const context = alerts.slice(0, 10).map((alert, index) => 
-      `[${index}] ${alert.title} (${alert.category}, ${alert.severity}): ${alert.description.substring(0, 100)}...`
+    const normalizedQuestion = question.toLowerCase()
+    
+    // 1. Extract keywords from the question for relevance boosting
+    // Simple noun/topic extraction (words > 3 chars, removing common stop words)
+    const stopWords = new Set(['what', 'where', 'when', 'how', 'many', 'tell', 'show', 'please', 'about', 'with', 'there', 'some', 'this', 'that'])
+    const keywords = normalizedQuestion.split(/\W+/).filter(w => w.length > 2 && !stopWords.has(w))
+    
+    // 2. Score and sort alerts by relevance to the specific question
+    const scoredAlerts = alerts.map(alert => {
+      let score = 0
+      const title = alert.title.toLowerCase()
+      const desc = alert.description.toLowerCase()
+      const cat = alert.category.toLowerCase()
+      
+      keywords.forEach(kw => {
+        if (title.includes(kw)) score += 10
+        if (cat.includes(kw)) score += 5
+        if (desc.includes(kw)) score += 2
+      })
+      
+      return { ...alert, relevanceScore: score }
+    }).sort((a, b) => b.relevanceScore - a.relevanceScore || b.created_at.getTime() - a.created_at.getTime())
+
+    // 3. Use top 15 most relevant alerts for context
+    const contextAlerts = scoredAlerts.slice(0, 15)
+    
+    const context = contextAlerts.map((alert, index) => 
+      `[${index}] ${alert.title} (${alert.category}): ${alert.description.substring(0, 150)}...`
     ).join('\n')
 
-    const prompt = `You are a helpful security assistant. Based on the following security alerts, answer the user's question and reference the specific alerts you used.
+    const prompt = `TARGET QUERY: ${question}
+(This is your primary mission. Provide a detailed, conversational answer focused on this specific user intent.)
 
-Recent Security Alerts:
-${context}
-
-User Question: ${question}
-
-Provide a helpful, concise answer based on the available alerts. If no relevant alerts are found, say so politely. Keep the answer under 150 words.
-
-IMPORTANT: At the end of your answer, include the alert numbers you referenced in this format: [References: 0, 2, 4]`
+RAW SECURITY DATA:
+${context}`
 
     const result = await queryWithAI(prompt)
     
-    // Extract alert references from the response
-    const referenceMatch = result.summary?.match(/\[References: ([\d,\s]+)\]/)
-    const referencedIndexes = referenceMatch ? referenceMatch[1].split(',').map((i: string) => parseInt(i.trim())) : []
-    const referencedAlerts = referencedIndexes.map(index => alerts[index]).filter(Boolean)
+    const summary = result.summary || ''
     
-    // Clean the answer to remove the references part
-    const cleanAnswer = result.summary?.replace(/\[References: [\d,\s]+\]/, '').trim() || 
-      `I found ${alerts.length} recent alerts. Based on your question "${question}", here's what I can tell you: ${result.summary}`
+    // Extract all alert references from the response (globally in case AI included multiple)
+    const referenceRegex = /\[References: ([\d,\s]+)\]/g
+    const matches = Array.from(summary.matchAll(referenceRegex))
+    const referencedIndexes = Array.from(new Set(
+      matches.flatMap(match => match[1].split(',').map((i: string) => parseInt(i.trim())))
+    ))
+    const referencedAlerts = referencedIndexes.map(index => contextAlerts[index]).filter(Boolean)
+    
+    // 2. Clear all reference markers from the visible text for a cleaner UI
+    // This regex targets the entire line/tag regardless of terminal spacing
+    const cleanAnswer = result.summary
+      .replace(/\s*\[References: [\d, ]+\]\s*$/g, '') // remove from end with any whitespace
+      .replace(/\[References: [\d, ]+\]/g, '')         // final safety check for any remaining tags
+      .trim() || 
+      `I found ${alerts.length} recent alerts. Based on your intent, here's what I can tell you: ${result.summary}`
     
     return { 
       answer: cleanAnswer, 
@@ -133,6 +162,13 @@ IMPORTANT: At the end of your answer, include the alert numbers you referenced i
     const normalizedQuestion = question.toLowerCase()
     let answer = ''
     let referencedAlerts: any[] = []
+    
+    // Calculate stats used in multiple blocks
+    const activeCount = alerts.filter(a => !a.resolved).length
+    const categoryCounts = alerts.reduce((acc: Record<string, number>, alert) => {
+      acc[alert.category] = (acc[alert.category] || 0) + 1
+      return acc
+    }, {})
     
     // Smart keyword matching for different query types
     if (normalizedQuestion.includes('phishing') || normalizedQuestion.includes('scam') || normalizedQuestion.includes('fraud')) {
@@ -148,7 +184,12 @@ IMPORTANT: At the end of your answer, include the alert numbers you referenced i
       )
       
       if (phishingAlerts.length > 0) {
-        answer = `Found ${phishingAlerts.length} phishing/scam alerts. Recent ones include: ${phishingAlerts.slice(0, 3).map(a => a.title).join(', ')}. Be cautious of urgent requests for personal information or account verification.`
+        answer = `I've found **${phishingAlerts.length}** alerts related to phishing or scams. These often involve suspicious links or requests for verification.
+
+**Recent highlights:**
+${phishingAlerts.slice(0, 3).map(a => `• ${a.title}`).join('\n')}
+
+Please be extremely cautious with any unexpected emails or messages asking for personal data.`
         referencedAlerts = phishingAlerts.slice(0, 3)
       }
     }
@@ -160,7 +201,12 @@ IMPORTANT: At the end of your answer, include the alert numbers you referenced i
       )
       
       if (cveAlerts.length > 0) {
-        answer = `Found ${cveAlerts.length} vulnerability alerts. Recent ones: ${cveAlerts.slice(0, 3).map(a => a.title).join(', ')}. Consider applying security updates promptly.`
+        answer = `I've detected **${cveAlerts.length}** vulnerability alerts (CVEs). Keeping your software updated is the best defense against these.
+
+**Key alerts to check:**
+${cveAlerts.slice(0, 3).map(a => `• ${a.title}`).join('\n')}
+
+Make sure to apply any pending security updates on your devices soon.`
         referencedAlerts = cveAlerts.slice(0, 3)
       }
     }
@@ -171,7 +217,12 @@ IMPORTANT: At the end of your answer, include the alert numbers you referenced i
       )
       
       if (criticalAlerts.length > 0) {
-        answer = `Found ${criticalAlerts.length} critical/high severity alerts requiring immediate attention: ${criticalAlerts.slice(0, 3).map(a => a.title).join(', ')}.`
+        answer = `I've found **${criticalAlerts.length}** critical or high-severity alerts that require your immediate attention.
+
+**Important issues:**
+${criticalAlerts.slice(0, 3).map(a => `• ${a.title}`).join('\n')}
+
+I recommend reviewing these as soon as possible to ensure your safety.`
         referencedAlerts = criticalAlerts.slice(0, 3)
       }
     }
@@ -184,7 +235,12 @@ IMPORTANT: At the end of your answer, include the alert numbers you referenced i
       )
       
       if (breachAlerts.length > 0) {
-        answer = `Found ${breachAlerts.length} data breach related alerts: ${breachAlerts.slice(0, 3).map(a => a.title).join(', ')}. Monitor your accounts for suspicious activity.`
+        answer = `There are **${breachAlerts.length}** alerts concerning data breaches or exposed information. 
+
+**Recent reports:**
+${breachAlerts.slice(0, 3).map(a => `• ${a.title}`).join('\n')}
+
+It's a good idea to monitor your online accounts and consider changing important passwords.`
         referencedAlerts = breachAlerts.slice(0, 3)
       }
     }
@@ -196,34 +252,53 @@ IMPORTANT: At the end of your answer, include the alert numbers you referenced i
       )
       
       if (localAlerts.length > 0) {
-        answer = `Found ${localAlerts.length} local safety alerts: ${localAlerts.slice(0, 3).map(a => a.title).join(', ')}. Stay aware of your surroundings.`
+        answer = `I've found **${localAlerts.length}** safety alerts for your general area.
+
+**Local incidents:**
+${localAlerts.slice(0, 3).map(a => `• ${a.title}`).join('\n')}
+
+Stay aware of your surroundings and check for updates from local authorities.`
         referencedAlerts = localAlerts.slice(0, 3)
       }
     }
 
     // Count-based queries
-    if (normalizedQuestion.includes('how many') || normalizedQuestion.includes('count') || normalizedQuestion.includes('number')) {
-      const activeCount = alerts.filter(a => !a.resolved).length
-      const categoryCounts = alerts.reduce((acc, alert) => {
-        acc[alert.category] = (acc[alert.category] || 0) + 1
-        return acc
-      }, {} as Record<string, number>)
-      
-      answer = `I found ${alerts.length} total alerts (${activeCount} active). Breakdown: ${Object.entries(categoryCounts).map(([cat, count]) => `${cat}: ${count}`).join(', ')}.`
+    if (normalizedQuestion.includes('count') || 
+        normalizedQuestion.includes('how many') || 
+        normalizedQuestion.includes('total') || 
+        normalizedQuestion.includes('breakdown') ||
+        normalizedQuestion.includes('summary')) {
+      answer = `I analyzed **${alerts.length}** total alerts, with **${activeCount}** still requiring attention.
+
+**Current Breakdown:**
+${Object.entries(categoryCounts).map(([cat, count]) => `• ${cat}: ${count}`).join('\n')}
+
+Is there a specific threat or category you'd like me to look into?`
       referencedAlerts = alerts.slice(0, 3)
     }
 
     // Recent/active queries
     if (normalizedQuestion.includes('recent') || normalizedQuestion.includes('latest') || normalizedQuestion.includes('new')) {
       const recentAlerts = alerts.slice(0, 5)
-      answer = `Recent alerts: ${recentAlerts.map(a => a.title).join(', ')}. Stay informed about these emerging threats.`
+      answer = `Here are the **latest ${recentAlerts.length} alerts** that have been reported:
+
+${recentAlerts.map(a => `• ${a.title}`).join('\n')}
+
+Staying informed about these emerging threats is your best protection.`
       referencedAlerts = recentAlerts
     }
 
     // Default response
     if (!answer) {
-      const activeCount = alerts.filter(a => !a.resolved).length
-      answer = `I found ${alerts.length} total alerts (${activeCount} active). For specific information about phishing, vulnerabilities, data breaches, or local threats, please ask more specifically. Recent alerts include: ${alerts.slice(0, 3).map(a => a.title).join(', ')}.`
+      answer = `I can help you stay informed by analyzing the **${alerts.length}** alerts in our system (including **${activeCount}** unresolved ones).
+
+**Common threats to ask about:**
+• Phishing and scams
+• Software vulnerabilities (CVEs)
+• Data breaches
+• Local safety incidents
+
+Try asking: *"What are the most recent phishing scams?"* or *"Are there any critical alerts?"*`
       referencedAlerts = alerts.slice(0, 3)
     }
 
