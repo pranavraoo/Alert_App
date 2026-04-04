@@ -140,6 +140,10 @@ export class QueryController {
       ? '[!] NO DIRECTLY RELEVANT ALERTS FOUND IN DATABASE. Providing general latest community context only.'
       : `[Found ${contextAlerts.length} relevant alerts in community database.]`
 
+    if (topScore === 0) {
+      console.log(`[DEBUG] No highly relevant alerts for question: "${question}". AI will provide general context.`)
+    }
+
     const prompt = `TARGET QUERY: ${question}
 (This is your primary mission. Provide a detailed, conversational answer focused on this specific user intent.)
 
@@ -162,8 +166,8 @@ ${context}`
 
     // 2. Clear all reference markers and Meta-Chatter from the visible text
     // Fortress Extraction: Pull content from <narrative> or <security_report> tags if present
-    const tagMatch = result.summary.match(/<(?:narrative|security_report)>([\s\S]*?)(?:<\/(?:narrative|security_report)>|$)/i)
-    const rawContent = tagMatch ? tagMatch[1] : result.summary
+    const tagMatch = summary.match(/<(?:narrative|security_report)>([\s\S]*?)(?:<\/(?:narrative|security_report)>|$)/i)
+    const rawContent = tagMatch ? tagMatch[1] : summary
 
     // Line-by-line sanitize for stubborn AI meta-chatter and terminal italics
     console.log(`[DEBUG] Raw AI Content Length: ${rawContent.length}`)
@@ -185,12 +189,11 @@ ${context}`
       })
       .join('\n')
       .replace(/<\/?(?:narrative|security_report)>/gi, '') // Nuclear scrub of literal tags
-      .replace(/\s*\[References: [\d, ]+\]\s*$/g, '')
-      .replace(/\s*\[References: [\d, ]+\]\s*$/g, '') // remove from end
-      .replace(/\[References: [\d, ]+\]/g, '')         // final safety check
+      .replace(/\s*\[References: [\d, ]+\]\s*$/g, '')      // strip from end
+      .replace(/\[References: [\d, ]+\]/g, '')             // final safety check
       .replace(/\n{3,}/g, '\n\n')
       .trim() ||
-      `I found ${alerts.length} recent alerts. Based on your intent, here's what I can tell you: ${result.summary}`
+      `I found ${alerts.length} recent alerts. Based on your intent, here's what I can tell you: ${summary}`
 
     return {
       answer: cleanAnswer,

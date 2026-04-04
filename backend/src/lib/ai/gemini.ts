@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import type { AICategorizationResult } from '../../types/alert'
+import { extractJSON } from './utils.js'
 
 export async function categorizeWithGemini(text: string): Promise<AICategorizationResult> {
   const apiKey = process.env.GEMINI_API_KEY
@@ -25,19 +26,10 @@ export async function categorizeWithGemini(text: string): Promise<AICategorizati
   })
 
   const result = await model.generateContent(text)
-  let content = result.response.text()
+  const content = result.response.text()
   console.log('Gemini raw response:', content)
 
-  // Remove markdown code blocks if present
-  if (content.includes('```json')) {
-    content = content.replace(/```json\s*/, '').replace(/```\s*$/, '')
-  } else if (content.includes('```')) {
-    content = content.replace(/```\s*/, '').replace(/```\s*$/, '')
-  }
-
-  // Clean up any extra whitespace
-  content = content.trim()
-  return JSON.parse(content) as AICategorizationResult
+  return extractJSON<AICategorizationResult>(content)
 }
 
 export async function queryWithGemini(prompt: string, mode: 'narrative' | 'report' = 'narrative'): Promise<{ summary: string }> {

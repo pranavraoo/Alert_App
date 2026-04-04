@@ -123,9 +123,9 @@ export default function ThreatQuery() {
                         <div className="prose prose-sm dark:prose-invert max-w-none 
                                      text-[13px] text-slate-600 dark:text-slate-300 leading-normal
                                      prose-headings:text-slate-800 dark:prose-headings:text-white
-                                     prose-headings:text-sm prose-headings:font-bold prose-headings:mt-3 prose-headings:mb-1.5
-                                     prose-p:mb-2 prose-strong:text-blue-600 dark:prose-strong:text-blue-400
-                                     prose-ul:my-1.5 prose-ul:list-disc prose-ul:ml-4 prose-li:my-0.5">
+                                     prose-headings:text-sm prose-headings:font-bold prose-headings:mt-4 prose-headings:mb-2
+                                     prose-p:mb-3 prose-strong:text-blue-600 dark:prose-strong:text-blue-400 prose-strong:font-bold
+                                     prose-ul:my-2 prose-ul:list-disc prose-ul:pl-5 prose-li:my-1 prose-li:leading-relaxed">
                             <ReactMarkdown>
                                 {answer
                                     .replace(/^### /g, '\n### ') // Ensure first header has newline if at start

@@ -36,7 +36,21 @@ app.use((req: express.Request, res: express.Response) => {
 })
 
 const port = Number(process.env.PORT ?? '4000')
-app.listen(port, '0.0.0.0', () => {
+const server = app.listen(port, '0.0.0.0', () => {
   console.log(`Backend listening on http://0.0.0.0:${port}`)
 })
+
+// Graceful shutdown
+const shutdown = async () => {
+  console.log('Shutting down gracefully...')
+  server.close(async () => {
+    console.log('HTTP server closed.')
+    await prisma.$disconnect()
+    console.log('Database connection closed.')
+    process.exit(0)
+  })
+}
+
+process.on('SIGTERM', shutdown)
+process.on('SIGINT', shutdown)
 

@@ -1,4 +1,5 @@
 import type { AICategorizationResult } from '../../types/alert.ts'
+import { fetchWithTimeout, extractJSON } from './utils.js'
 
 type OllamaChatResponse = {
   message?: { content?: string }
@@ -19,7 +20,7 @@ export async function categorizeWithOllama(text: string): Promise<AICategorizati
     '{ "title": "Catchy title under 50 chars", "category": "One of: Scam, Phishing, Imposter, Data breach, Local safety, CVE, Other", "severity": "...", "summary": "Human-centric summary under 120 chars", "suggested_action": "1-2 concrete steps.", "reason": "Brief explanation under 80 chars.", "confidence": "high" }',
   ].join('\n')
 
-  const res = await fetch(`${baseUrl.replace(/\/$/, '')}/api/chat`, {
+  const res = await fetchWithTimeout(`${baseUrl.replace(/\/$/, '')}/api/chat`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
@@ -30,7 +31,7 @@ export async function categorizeWithOllama(text: string): Promise<AICategorizati
         { role: 'user', content: text },
       ],
     }),
-  })
+  }, 15000)
 
   if (!res.ok) throw new Error(`Ollama error: ${res.status}`)
 
@@ -40,7 +41,7 @@ export async function categorizeWithOllama(text: string): Promise<AICategorizati
 
   console.log('Ollama raw content:', content)
 
-  const result = JSON.parse(content) as AICategorizationResult
+  const result = extractJSON<AICategorizationResult>(content)
   return result
 
 }
@@ -89,7 +90,7 @@ export async function queryWithOllama(prompt: string, mode: 'narrative' | 'repor
 
   const system = mode === 'report' ? REPORT_SYSTEM : NARRATIVE_SYSTEM
 
-  const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/chat`, {
+  const response = await fetchWithTimeout(`${baseUrl.replace(/\/$/, '')}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -100,7 +101,7 @@ export async function queryWithOllama(prompt: string, mode: 'narrative' | 'repor
         { role: 'user', content: prompt }
       ]
     })
-  })
+  }, 30000) // Longer timeout for queries
 
   if (!response.ok) {
     throw new Error(`Ollama API returned ${response.status}`)
