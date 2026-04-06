@@ -19,8 +19,12 @@ document.addEventListener('DOMContentLoaded', function() {
         sourceUrl: url,
         linkUrl: ''
       }, function() {
+        const params = new URLSearchParams({
+          text: `Suspicious page: ${url}`,
+          url: url
+        });
         chrome.tabs.create({
-          url: `${COMMUNITY_GUARDIAN_URL}/create`
+          url: `${COMMUNITY_GUARDIAN_URL}/create?${params.toString()}`
         }, function() {
           window.close()
         })
@@ -50,8 +54,12 @@ document.addEventListener('DOMContentLoaded', function() {
             sourceUrl: currentTab.url,
             linkUrl: ''
           }, function() {
+            const params = new URLSearchParams({
+              text: selectedText.trim(),
+              url: currentTab.url
+            });
             chrome.tabs.create({
-              url: `${COMMUNITY_GUARDIAN_URL}/create`
+              url: `${COMMUNITY_GUARDIAN_URL}/create?${params.toString()}`
             }, function() {
               window.close()
             })

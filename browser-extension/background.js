@@ -32,8 +32,12 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       sourceUrl: pageUrl,
       linkUrl: linkUrl
     }, () => {
+      const params = new URLSearchParams({
+        text: threatText,
+        url: pageUrl
+      });
       chrome.tabs.create({
-        url: `${COMMUNITY_GUARDIAN_URL}/create`
+        url: `${COMMUNITY_GUARDIAN_URL}/create?${params.toString()}`
       })
     })
   }
@@ -52,7 +56,7 @@ chrome.action.onClicked.addListener((tab) => {
       linkUrl: ''
     }, () => {
       chrome.tabs.create({
-        url: `${COMMUNITY_GUARDIAN_URL}/create`
+        url: `${COMMUNITY_GUARDIAN_URL}/create?text=${encodeURIComponent(`Suspicious page: ${url}`)}&url=${encodeURIComponent(url)}`
       })
     })
   })
@@ -68,8 +72,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sourceUrl: url,
       linkUrl: ''
     }, () => {
+      const params = new URLSearchParams({ text, url });
       chrome.tabs.create({
-        url: `${COMMUNITY_GUARDIAN_URL}/create`
+        url: `${COMMUNITY_GUARDIAN_URL}/create?${params.toString()}`
       })
     })
     

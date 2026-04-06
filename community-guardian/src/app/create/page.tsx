@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useRef, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAlerts } from '@/hooks/useAlerts'
 import { useStore } from '@/store/useStore'
 import { findSimilarAlerts } from '@/lib/similarity'
@@ -25,8 +25,9 @@ const EMPTY_FORM = {
   confidence: 'high' as 'high' | 'low',
 }
 
-export default function CreatePage() {
+function CreatePageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { createAlert } = useAlerts()
   const alerts = useStore((s) => s.alerts)
 
@@ -42,23 +43,45 @@ export default function CreatePage() {
 
   // Load extension data on mount
   useEffect(() => {
-    if (typeof window !== 'undefined' && (window as any).chrome?.storage) {
-      (window as any).chrome.storage.local.get(['threatText', 'sourceUrl', 'linkUrl'], (result: any) => {
-        if (result.threatText) {
-          setPasteText(result.threatText)
-          setForm(f => ({
-            ...f,
-            title: f.title || result.threatText.slice(0, 80),
-            description: f.description || result.threatText.slice(0, 500),
-            location: result.sourceUrl || f.location
-          }))
-          
-          // Clear stored data
-          ;(window as any).chrome.storage.local.remove(['threatText', 'sourceUrl', 'linkUrl'])
-        }
-      })
+    // 1. Try to load from URL query parameters (Primary method for web)
+    const textParam = searchParams.get('text')
+    const urlParam = searchParams.get('url')
+
+    console.log('COMMUNITY_GUARDIAN: Checking params', { textParam, urlParam })
+
+    if (textParam) {
+      console.log('COMMUNITY_GUARDIAN: Found text param, updating state')
+      setPasteText(textParam)
+      setForm(f => ({
+        ...f,
+        title: f.title || textParam.slice(0, 80),
+        description: f.description || textParam.slice(0, 500),
+        location: urlParam || f.location
+      }))
     }
-  }, [])
+
+    // 2. Fallback: try to load from chrome.storage
+    if (typeof window !== 'undefined' && (window as any).chrome?.storage) {
+      try {
+        (window as any).chrome.storage.local.get(['threatText', 'sourceUrl', 'linkUrl'], (result: any) => {
+          if (result && result.threatText) {
+            console.log('COMMUNITY_GUARDIAN: Found storage data', result)
+            setPasteText(result.threatText)
+            setForm(f => ({
+              ...f,
+              title: f.title || result.threatText.slice(0, 80),
+              description: f.description || result.threatText.slice(0, 500),
+              location: result.sourceUrl || f.location
+            }))
+            // Clear stored data
+            ;(window as any).chrome.storage.local.remove(['threatText', 'sourceUrl', 'linkUrl'])
+          }
+        })
+      } catch (e) {
+        console.warn('COMMUNITY_GUARDIAN: Storage access failed', e)
+      }
+    }
+  }, [searchParams])
 
   // ── Categorize ─────────────────────────────────────────────────────────────
   const handleCategorize = async () => {
@@ -539,5 +562,13 @@ export default function CreatePage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function CreatePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <CreatePageContent />
+    </Suspense>
   )
 }
