@@ -212,6 +212,7 @@ export default function AlertDetailPage({
       <div className="bg-white dark:bg-slate-800 rounded-xl
                       border border-slate-200 dark:border-slate-700 p-6 space-y-4">
         <CategoryChecklist
+          key={alert.id}
           category={alert.category}
           onAllChecked={() => setAllChecked(true)}
         />

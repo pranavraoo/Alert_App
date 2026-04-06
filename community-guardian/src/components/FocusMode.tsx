@@ -122,7 +122,7 @@ export default function FocusMode({ alerts, onClose }: Props) {
 
                 {/* Checklist */}
                 <div className="border-t border-slate-100 dark:border-slate-700 pt-4">
-                    <CategoryChecklist category={alert.category} />
+                    <CategoryChecklist key={alert.id} category={alert.category} />
                 </div>
 
                 {/* Suggested action */}
