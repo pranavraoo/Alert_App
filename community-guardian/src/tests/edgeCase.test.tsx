@@ -1,3 +1,12 @@
+/**
+ * EDGE CASE & VALIDATION TESTS
+ * ----------------------------
+ * This suite verifies that the app correctly handles 'bad' or 'edge' inputs.
+ * Specific tests include:
+ * - Empty Submissions: Verifies that paste-tabs without content show correct error messages.
+ * - Minimum Length Checks: Checks for 'Too Short' errors in Title and Description.
+ * - API Failure Paths: Ensures that invalid form data is caught before it even reaches the network.
+ */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -5,6 +14,7 @@ import userEvent from '@testing-library/user-event'
 vi.mock('next/navigation', () => ({
     useRouter: () => ({ push: vi.fn(), back: vi.fn() }),
     usePathname: () => '/create',
+    useSearchParams: () => new URLSearchParams(),
 }))
 
 vi.mock('@/lib/apiBase', () => ({

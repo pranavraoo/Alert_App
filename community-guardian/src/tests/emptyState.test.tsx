@@ -1,3 +1,13 @@
+/**
+ * EMPTY STATE & UI TESTS
+ * ----------------------
+ * This suite tests the user experience when no data is found after applying filters.
+ * Key UI verifications:
+ * - Empty Alert Messages: Checking that the 'No alerts match your filters' message appears.
+ * - Icon Checks: Ensuring the magnifying glass or other relevant icons are rendered.
+ * - Clear UX: Verifying clear instructions are provided for how a user should recover.
+ * - Loading Skeletons: (Indirectly) ensures the page can initialize without crashing.
+ */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -5,6 +15,7 @@ import userEvent from '@testing-library/user-event'
 vi.mock('next/navigation', () => ({
     useRouter: () => ({ push: vi.fn(), back: vi.fn() }),
     usePathname: () => '/alerts',
+    useSearchParams: () => new URLSearchParams(),
 }))
 
 vi.mock('@/lib/apiBase', () => ({

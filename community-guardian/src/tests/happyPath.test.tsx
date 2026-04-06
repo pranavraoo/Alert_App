@@ -1,3 +1,13 @@
+/**
+ * HAPPY PATH TESTS — Create → Save
+ * -------------------------------
+ * This suite tests the "perfect" user flow where everything works as expected.
+ * Specific tests include:
+ * - Tab Navigation: Ensuring users can switch to the Manual Add form.
+ * - Form Interaction: Verifying that typing in title, description, and categories works.
+ * - Validation State: Ensuring the "Save" button is only enabled when valid data is present.
+ * - Store Sync: Verifying that a new alert is correctly added to the global store after saving.
+ */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -7,6 +17,7 @@ const mockPush = vi.fn()
 vi.mock('next/navigation', () => ({
     useRouter: () => ({ push: mockPush, back: vi.fn() }),
     usePathname: () => '/create',
+    useSearchParams: () => new URLSearchParams(),
 }))
 
 // ── Mock apiBase ─────────────────────────────────────────────────────────────

@@ -1,3 +1,12 @@
+/**
+ * FALLBACK & AI FAILURE TESTS
+ * ---------------------------
+ * This suite tests the application's resilience when external AI services fail.
+ * Key tests include:
+ * - API Resilience: Ensures a "Network Error" in the AI categorization service doesn't crash the app.
+ * - Keyword Matching: Verifies the 'RegEx-based' fallback system correctly identifies 'Phishing' and 'Scams'.
+ * - Severity Escalation: Checks if the fallback system correctly flags 'URGENT' alerts as 'Critical'.
+ */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -6,6 +15,7 @@ import { fallbackCategorize } from '@/lib/fallback'
 vi.mock('next/navigation', () => ({
     useRouter: () => ({ push: vi.fn(), back: vi.fn() }),
     usePathname: () => '/create',
+    useSearchParams: () => new URLSearchParams(),
 }))
 
 vi.mock('@/lib/apiBase', () => ({
