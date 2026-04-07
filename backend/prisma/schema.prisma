@@ -24,6 +24,7 @@ model Alert {
   created_at       DateTime @default(now())
   verification_count    Int     @default(0)
   verification_status   String  @default("pending")
+  checklist_state       Boolean[] @default([])
 
   @@index([category])
   @@index([severity])

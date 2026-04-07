@@ -7,16 +7,25 @@ import type { AlertCategory } from '@/types/alert'
 interface Props {
     category: AlertCategory
     onAllChecked?: () => void
+    checked?: boolean[]
+    onToggle?: (index: number) => void
 }
 
-export default function CategoryChecklist({ category, onAllChecked }: Props) {
+export default function CategoryChecklist({ category, onAllChecked, checked: propsChecked, onToggle }: Props) {
     const steps = CHECKLISTS[category] ?? CHECKLISTS['Other']
-    const [checked, setChecked] = useState<boolean[]>(steps.map(() => false))
+    const [internalChecked, setInternalChecked] = useState<boolean[]>(steps.map(() => false))
+
+    const isControlled = propsChecked !== undefined && onToggle !== undefined
+    const checked = isControlled ? propsChecked : internalChecked
 
     const toggle = (i: number) => {
-        const next = checked.map((v, idx) => (idx === i ? !v : v))
-        setChecked(next)
-        if (next.every(Boolean)) onAllChecked?.()
+        if (isControlled) {
+            onToggle(i)
+        } else {
+            const next = internalChecked.map((v, idx) => (idx === i ? !v : v))
+            setInternalChecked(next)
+            if (next.every(Boolean)) onAllChecked?.()
+        }
     }
 
     return (

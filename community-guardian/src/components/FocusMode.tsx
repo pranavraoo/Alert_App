@@ -9,15 +9,23 @@ import {
     SEVERITY_STYLES,
     SOURCE_STYLES,
     CATEGORY_STYLES,
+    CHECKLISTS,
 } from '@/lib/constants'
+import { useStore } from '@/store/useStore'
 
 interface Props {
     alerts: Alert[]
     onClose: () => void
 }
 
-export default function FocusMode({ alerts, onClose }: Props) {
+export default function FocusMode({ alerts: initialAlerts, onClose }: Props) {
     const [index, setIndex] = useState(0)
+    const storeAlerts = useStore((s) => s.alerts)
+    const checklistStatuses = useStore((s) => s.checklistStatuses)
+    const updateChecklistStatus = useStore((s) => s.updateChecklistStatus)
+
+    // Sync with store to get latest alerts
+    const alerts = initialAlerts.map(a => storeAlerts.find(sa => sa.id === a.id) || a)
 
     if (alerts.length === 0) {
         return (
@@ -122,7 +130,16 @@ export default function FocusMode({ alerts, onClose }: Props) {
 
                 {/* Checklist */}
                 <div className="border-t border-slate-100 dark:border-slate-700 pt-4">
-                    <CategoryChecklist key={alert.id} category={alert.category} />
+                    <CategoryChecklist
+                        category={alert.category}
+                        checked={checklistStatuses[alert.id] || (CHECKLISTS[alert.category] ?? CHECKLISTS['Other']).map(() => false)}
+                        onToggle={(stepIndex) => {
+                            const steps = CHECKLISTS[alert.category] ?? CHECKLISTS['Other']
+                            const current = checklistStatuses[alert.id] || steps.map(() => false)
+                            const next = current.map((v, i) => i === stepIndex ? !v : v)
+                            updateChecklistStatus(alert.id, next)
+                        }}
+                    />
                 </div>
 
                 {/* Suggested action */}

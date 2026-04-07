@@ -18,6 +18,10 @@ interface Store {
     removeGuardian: (id: string) => void
     setLastChecked: (ts: string) => void
     setLoading: (loading: boolean) => void
+
+    // Persistent local state for checklists
+    checklistStatuses: Record<string, boolean[]>
+    updateChecklistStatus: (id: string, status: boolean[]) => void
 }
 
 export const useStore = create<Store>((set) => ({
@@ -46,4 +50,10 @@ export const useStore = create<Store>((set) => ({
 
     setLastChecked: (lastChecked) => set({ lastChecked }),
     setLoading: (loading) => set({ loading }),
+
+    checklistStatuses: {} as Record<string, boolean[]>,
+    updateChecklistStatus: (id, status) =>
+        set((s) => ({
+            checklistStatuses: { ...s.checklistStatuses, [id]: status },
+        })),
 }))

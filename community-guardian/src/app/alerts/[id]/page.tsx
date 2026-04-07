@@ -16,6 +16,7 @@ import {
   SEVERITY_STYLES,
   SOURCE_STYLES,
   CATEGORY_STYLES,
+  CHECKLISTS,
 } from '@/lib/constants'
 import type { Alert } from '@/types/alert'
 
@@ -27,7 +28,8 @@ export default function AlertDetailPage({
   const { id } = use(params)
   const router = useRouter()
   const { fetchAlert, updateAlert } = useAlerts()
-  const storeUpdate = useStore((s) => s.updateAlert)
+  const checklistStatuses = useStore((s) => s.checklistStatuses)
+  const updateChecklistStatus = useStore((s) => s.updateChecklistStatus)
 
   const [alert, setAlert] = useState<Alert | null>(null)
   const [loading, setLoading] = useState(true)
@@ -212,8 +214,16 @@ export default function AlertDetailPage({
       <div className="bg-white dark:bg-slate-800 rounded-xl
                       border border-slate-200 dark:border-slate-700 p-6 space-y-4">
         <CategoryChecklist
-          key={alert.id}
           category={alert.category}
+          checked={checklistStatuses[alert.id] || (CHECKLISTS[alert.category] ?? CHECKLISTS['Other']).map(() => false)}
+          onToggle={(stepIndex) => {
+            const steps = CHECKLISTS[alert.category] ?? CHECKLISTS['Other']
+            const current = checklistStatuses[alert.id] || steps.map(() => false)
+            const next = current.map((v, i) => i === stepIndex ? !v : v)
+            
+            // Update global store vault
+            updateChecklistStatus(alert.id, next)
+          }}
           onAllChecked={() => setAllChecked(true)}
         />
 

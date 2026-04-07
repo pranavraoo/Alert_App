@@ -35,6 +35,7 @@ export interface Alert {
   verification_breakdown?: Record<string, number>
   distance?: number
   within_radius?: boolean
+  checklist_status?: boolean[]
 }
 
 export interface Guardian {
